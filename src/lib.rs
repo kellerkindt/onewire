@@ -43,22 +43,22 @@ impl OneWire {
         }
 
         self.ensure_wire_high()?;
-        let mut _cli = DisableInterrupts::new();
+        let mut cli = DisableInterrupts::new();
         unsafe {
             self.write_low();
             self.set_output_mode();
         }
-        drop(_cli);
+        drop(cli);
         delay_us(480);
         unsafe {
-            _cli = DisableInterrupts::new();
+            cli = DisableInterrupts::new();
             self.set_input_mode();
         }
         delay_us(70);
         let val = unsafe {
             self.read()
         };
-        drop(_cli);
+        drop(cli);
         delay_us(410);
         Ok(!val)
     }
@@ -91,7 +91,7 @@ impl OneWire {
     }
 
     fn read_bit(&self) -> bool {
-        let _cli = DisableInterrupts::new();
+        let cli = DisableInterrupts::new();
         unsafe {
             self.set_output_mode();
             self.write_low();
@@ -99,7 +99,7 @@ impl OneWire {
             self.set_input_mode();
             delay_us(10);
             let val = self.read();
-            drop(_cli);
+            drop(cli);
             delay_us(53);
             val
         }
@@ -125,20 +125,20 @@ impl OneWire {
     }
 
     fn write_bit(&self, bit: bool) {
-        let _cli = DisableInterrupts::new();
+        let cli = DisableInterrupts::new();
         unsafe {
             self.write_low();
             self.set_output_mode();
             delay_us(if bit {10} else {65});
             self.write_high();
+            drop(cli);
+            delay_us(if bit {55} else {5})
         }
-        drop(_cli);
-        delay_us(if bit {55} else {5})
     }
 
 
     fn disable_parasite_mode(&self) {
-        let _cli = DisableInterrupts::new();
+        let cli = DisableInterrupts::new();
         unsafe {
             self.set_input_mode();
             self.write_low();
