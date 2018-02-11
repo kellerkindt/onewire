@@ -13,4 +13,7 @@ license = "MIT"
 
 [dependencies]
 arduino = "0.1"
-avr_delay = { git =  "https://github.com/avr-rust/delay.git", branch = "master" }
+
+[dependencies.avr_delay]
+version = "0.1.0"
+path = "avr_delay"
