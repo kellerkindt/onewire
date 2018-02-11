@@ -7,14 +7,18 @@
 extern crate arduino;
 extern crate avr_delay;
 
+
 use avr_delay::delay_us;
+
 use arduino::prelude::DisableInterrupts;
+
+use core::ptr::read_volatile;
+use core::ptr::write_volatile;
 
 pub enum OneWireError {
     WireNotHigh,
 }
 
-#[derive(Default)]
 pub struct OneWireDevice {
     pub address: [u8; 8]
 }
@@ -78,6 +82,7 @@ impl OneWire {
         let mut rom_byte_mask = 0_u8;
         let mut search_direction = false;
 
+
         if !rom.last_device_flag {
             if !self.reset()? {
                 return Ok(None);
@@ -85,7 +90,7 @@ impl OneWire {
 
             self.write_byte(command, false);
 
-            loop {
+            while rom_byte_number < 8 {
                 let id_bit = self.read_bit();
                 let cmp_id_bit = self.read_bit();
 
@@ -129,10 +134,6 @@ impl OneWire {
                     rom_byte_number += 1;
                     rom_byte_mask = 0x01;
                 }
-
-                if rom_byte_number >= 8 {
-                    break;
-                }
             }
 
             if id_bit_number >= 65 {
@@ -167,29 +168,32 @@ impl OneWire {
     /// Ok(true) if presence pulse has been received and Ok(false)
     /// if no other device was detected but the wire seems to be ok
     pub fn reset(&self) -> Result<bool, OneWireError> {
-        unsafe {
-            self.set_input_mode();
-        }
-
-        self.ensure_wire_high()?;
         let mut cli = DisableInterrupts::new();
         unsafe {
-            self.write_low();
-            self.set_output_mode();
+            self.set_input();
         }
-        drop(cli);
-        delay_us(480);
+        // drop(cli);
+
+        self.ensure_wire_high()?;
+        cli = DisableInterrupts::new();
         unsafe {
-            cli = DisableInterrupts::new();
-            self.set_input_mode();
+            self.write_low();
+            self.set_output();
         }
-        delay_us(70);
-        let val = unsafe {
-            self.read()
-        };
-        drop(cli);
+        // drop(cli);
+        delay_us(480);
+        cli = DisableInterrupts::new();
+        unsafe {
+            self.set_input();
+        }
+        let mut val = false;
+        for _ in 0..7 {
+            delay_us(10);
+            val |= unsafe { !self.read() }
+        }
+        // drop(cli);
         delay_us(410);
-        Ok(!val)
+        Ok(val)
     }
 
     fn ensure_wire_high(&self) -> Result<(), OneWireError> {
@@ -222,13 +226,13 @@ impl OneWire {
     fn read_bit(&self) -> bool {
         let cli = DisableInterrupts::new();
         unsafe {
-            self.set_output_mode();
+            self.set_output();
             self.write_low();
             delay_us(3);
-            self.set_input_mode();
+            self.set_input();
             delay_us(10);
             let val = self.read();
-            drop(cli);
+            // drop(cli);
             delay_us(53);
             val
         }
@@ -257,10 +261,10 @@ impl OneWire {
         let cli = DisableInterrupts::new();
         unsafe {
             self.write_low();
-            self.set_output_mode();
+            self.set_output();
             delay_us(if bit {10} else {65});
             self.write_high();
-            drop(cli);
+            // drop(cli);
             delay_us(if bit {55} else {5})
         }
     }
@@ -269,48 +273,44 @@ impl OneWire {
     fn disable_parasite_mode(&self) {
         let cli = DisableInterrupts::new();
         unsafe {
-            self.set_input_mode();
+            self.set_input();
             self.write_low();
         }
     }
 
-    #[inline]
-    fn pin(&self) -> *mut u8 {
+    pub fn pin(&self) -> *mut u8 {
         self.pin
     }
 
-    #[inline]
-    fn ddr(&self) -> *mut u8 {
-        (self.pin as usize + 1_usize) as *mut u8
+    pub fn ddr(&self) -> *mut u8 {
+        unsafe {
+            self.pin.offset(1)
+        }
     }
 
-    #[inline]
-    fn port(&self) -> *mut u8 {
-        (self.pin as usize + 2_usize) as *mut u8
+    pub fn port(&self) -> *mut u8 {
+        unsafe {
+            self.pin.offset(2)
+        }
     }
 
-    #[inline]
-    unsafe fn set_input_mode(&self) {
-        *self.ddr() &= !self.mask
+    unsafe fn set_input(&self) {
+        write_volatile(self.ddr(), read_volatile(self.ddr()) & !self.mask)
     }
 
-    #[inline]
-    unsafe fn set_output_mode(&self) {
-        *self.ddr() |= self.mask
+    unsafe fn set_output(&self) {
+        write_volatile(self.ddr(), read_volatile(self.ddr()) | self.mask)
     }
 
-    #[inline]
     unsafe fn write_low(&self) {
-        *self.port() &= !self.mask
+        write_volatile(self.port(), read_volatile(self.port()) & !self.mask)
     }
 
-    #[inline]
     unsafe fn write_high(&self) {
-        *self.port() |= self.mask
+        write_volatile(self.port(), read_volatile(self.port()) | self.mask)
     }
 
-    #[inline]
     unsafe fn read(&self) -> bool {
-        *self.pin() & self.mask == self.mask
+        read_volatile(self.pin()) & self.mask == self.mask
     }
 }
