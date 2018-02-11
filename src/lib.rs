@@ -76,7 +76,6 @@ impl OneWire {
         let mut id_bit_number = 1_u8;
         let mut last_zero = 0_u8;
         let mut rom_byte_number = 0_usize;
-        let mut rom_byte_mask = 0_u8;
         let mut search_result = false;
 
         let mut rom_byte_mask = 0_u8;
