@@ -1,0 +1,8 @@
+[package]
+name = "onewire"
+version = "0.1.0"
+authors = ["Michael Watzko <michael@watzko.de>"]
+
+[dependencies]
+arduino = "0.1"
+avr_delay = { git =  "https://github.com/avr-rust/delay.git", branch = "master" }
