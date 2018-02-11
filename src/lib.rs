@@ -7,10 +7,7 @@
 extern crate arduino;
 extern crate avr_delay;
 
-
 use avr_delay::delay_us;
-use core::ptr::write_volatile;
-use core::ptr::read_volatile;
 use arduino::prelude::DisableInterrupts;
 
 pub enum OneWireError {
@@ -43,22 +40,22 @@ impl OneWire {
         }
 
         self.ensure_wire_high()?;
-        let mut cli = DisableInterrupts::new();
+        let mut _cli = DisableInterrupts::new();
         unsafe {
             self.write_low();
             self.set_output_mode();
         }
-        drop(cli);
+        drop(_cli);
         delay_us(480);
         unsafe {
-            cli = DisableInterrupts::new();
+            _cli = DisableInterrupts::new();
             self.set_input_mode();
         }
         delay_us(70);
         let val = unsafe {
             self.read()
         };
-        drop(cli);
+        drop(_cli);
         delay_us(410);
         Ok(!val)
     }
@@ -85,13 +82,13 @@ impl OneWire {
         let mut byte = 0_u8;
         for _ in 0..8 {
             byte <<= 1;
-            byte |= if self.read_bit() {0x01} else {0x00};
+            byte |= self.read_byte();
         }
         byte
     }
 
     fn read_bit(&self) -> bool {
-        let cli = DisableInterrupts::new();
+        let _cli = DisableInterrupts::new();
         unsafe {
             self.set_output_mode();
             self.write_low();
@@ -99,7 +96,7 @@ impl OneWire {
             self.set_input_mode();
             delay_us(10);
             let val = self.read();
-            drop(cli);
+            drop(_cli);
             delay_us(53);
             val
         }
@@ -125,20 +122,20 @@ impl OneWire {
     }
 
     fn write_bit(&self, bit: bool) {
-        let cli = DisableInterrupts::new();
+        let _cli = DisableInterrupts::new();
         unsafe {
             self.write_low();
             self.set_output_mode();
             delay_us(if bit {10} else {65});
             self.write_high();
-            drop(cli);
+            drop(_cli);
             delay_us(if bit {55} else {5})
         }
     }
 
 
     fn disable_parasite_mode(&self) {
-        let cli = DisableInterrupts::new();
+        let _cli = DisableInterrupts::new();
         unsafe {
             self.set_input_mode();
             self.write_low();
