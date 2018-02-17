@@ -18,7 +18,7 @@ pub trait OpenDrainOutput {
 
     fn is_high(&self) -> bool;
 
-    fn delay_us(&mut self, us: u8);
+    fn delay_us(&mut self, us: u16);
 }
 
 
@@ -291,7 +291,7 @@ impl<O: OpenDrainOutput + Sized> OneWire<O> {
         self.output.is_high()
     }
     
-    fn delay_us(&mut self, us: u8) {
+    fn delay_us(&mut self, us: u16) {
         self.output.delay_us(us)
     }
 }
