@@ -1,3 +1,0 @@
-[submodule "avr_delay"]
-	path = avr_delay
-	url = https://github.com/avr-rust/delay.git
