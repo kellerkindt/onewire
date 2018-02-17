@@ -10,10 +10,3 @@ license = "MIT"
 
 [lib]
 
-
-[dependencies]
-arduino = "0.1"
-
-[dependencies.avr_delay]
-version = "0.1.0"
-path = "avr_delay"

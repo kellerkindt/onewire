@@ -1,20 +1,28 @@
 #![feature(asm)]
 
 #![no_std]
-
 #![crate_name = "onewire"]
 
-extern crate arduino;
-extern crate avr_delay;
 
 
-use avr_delay::delay_us;
 
-use arduino::prelude::DisableInterrupts;
+pub trait OpenDrainOutput {
 
-use core::ptr::read_volatile;
-use core::ptr::write_volatile;
+    fn drain_low(&mut self);
 
+    fn float_high(&mut self);
+
+    fn is_low(&self) -> bool {
+        !self.is_high()
+    }
+
+    fn is_high(&self) -> bool;
+
+    fn delay_us(&mut self, us: u8);
+}
+
+
+#[derive(Debug)]
 pub enum OneWireError {
     WireNotHigh,
 }
@@ -47,32 +55,30 @@ impl OneWireDeviceSearch {
     }
 }
 
-pub struct OneWire {
-    pin: *mut u8, // PIN+1 => DDR+1 => PORT
-    mask: u8,
+pub struct OneWire<O: OpenDrainOutput + Sized> {
+    output: O,
     parasite_mode: bool,
 }
 
-impl OneWire {
+impl<O: OpenDrainOutput + Sized> OneWire<O> {
 
-    pub fn new(pin: *mut u8, pin_no: u8, parasite_mode: bool) -> OneWire {
+    pub fn new(output: O, parasite_mode: bool) -> OneWire<O> {
         OneWire {
-            pin,
-            mask: 0x01 << pin_no,
+            output,
             parasite_mode,
         }
     }
 
-    pub fn search_next(&self, search: &mut OneWireDeviceSearch) -> Result<Option<OneWireDevice>, OneWireError> {
+    pub fn search_next(&mut self, search: &mut OneWireDeviceSearch) -> Result<Option<OneWireDevice>, OneWireError> {
         self.search(search, 0xF0)
     }
 
-    pub fn search_next_alarmed(&self, search: &mut OneWireDeviceSearch) -> Result<Option<OneWireDevice>, OneWireError> {
+    pub fn search_next_alarmed(&mut self, search: &mut OneWireDeviceSearch) -> Result<Option<OneWireDevice>, OneWireError> {
         self.search(search, 0xEC)
     }
 
     /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
-    fn search(&self, rom: &mut OneWireDeviceSearch, command: u8) -> Result<Option<OneWireDevice>, OneWireError> {
+    fn search(&mut self, rom: &mut OneWireDeviceSearch, command: u8) -> Result<Option<OneWireDevice>, OneWireError> {
         let mut id_bit_number = 1_u8;
         let mut last_zero = 0_u8;
         let mut rom_byte_number = 0_usize;
@@ -166,43 +172,37 @@ impl OneWire {
     /// Returns Err(WireNotHigh) if the wire seems to be shortened,
     /// Ok(true) if presence pulse has been received and Ok(false)
     /// if no other device was detected but the wire seems to be ok
-    pub fn reset(&self) -> Result<bool, OneWireError> {
-        let mut cli = DisableInterrupts::new();
-        unsafe {
-            self.set_input();
-        }
+    pub fn reset(&mut self) -> Result<bool, OneWireError> {
+        // let mut cli = DisableInterrupts::new();
+        self.set_input();
         // drop(cli);
 
         self.ensure_wire_high()?;
-        cli = DisableInterrupts::new();
-        unsafe {
-            self.write_low();
-            self.set_output();
-        }
+        // cli = DisableInterrupts::new();
+        self.write_low();
+        self.set_output();
+
         // drop(cli);
-        delay_us(480);
-        cli = DisableInterrupts::new();
-        unsafe {
-            self.set_input();
-        }
+        self.delay_us(480);
+        // cli = DisableInterrupts::new();
+        self.set_input();
+
         let mut val = false;
         for _ in 0..7 {
-            delay_us(10);
-            val |= unsafe { !self.read() }
+            self.delay_us(10);
+            val |= !self.read();
         }
         // drop(cli);
-        delay_us(410);
+        self.delay_us(410);
         Ok(val)
     }
 
-    fn ensure_wire_high(&self) -> Result<(), OneWireError> {
+    fn ensure_wire_high(&mut self) -> Result<(), OneWireError> {
         for _ in 0..125 {
-            unsafe {
-                if self.read() {
-                    return Ok(());
-                }
+            if self.read() {
+                return Ok(());
             }
-            delay_us(2);
+            self.delay_us(2);
         }
         Err(OneWireError::WireNotHigh)
     }
@@ -222,22 +222,20 @@ impl OneWire {
         byte
     }
 
-    fn read_bit(&self) -> bool {
-        let cli = DisableInterrupts::new();
-        unsafe {
-            self.set_output();
-            self.write_low();
-            delay_us(3);
-            self.set_input();
-            delay_us(10);
-            let val = self.read();
-            // drop(cli);
-            delay_us(53);
-            val
-        }
+    fn read_bit(&mut self) -> bool {
+        // let cli = DisableInterrupts::new();
+        self.set_output();
+        self.write_low();
+        self.delay_us(3);
+        self.set_input();
+        self.delay_us(10);
+        let val = self.read();
+        // drop(cli);
+        self.delay_us(53);
+        val
     }
 
-    pub fn write(&self, bytes: &[u8]) {
+    pub fn write(&mut self, bytes: &[u8]) {
         for b in bytes {
             self.write_byte(*b, false);
         }
@@ -246,7 +244,7 @@ impl OneWire {
         }
     }
 
-    fn write_byte(&self, mut byte: u8, parasite_mode: bool) {
+    fn write_byte(&mut self, mut byte: u8, parasite_mode: bool) {
         for _ in 0..8 {
             self.write_bit((byte & 0x01) == 0x01);
             byte >>= 1;
@@ -256,60 +254,44 @@ impl OneWire {
         }
     }
 
-    fn write_bit(&self, bit: bool) {
-        let cli = DisableInterrupts::new();
-        unsafe {
-            self.write_low();
-            self.set_output();
-            delay_us(if bit {10} else {65});
-            self.write_high();
-            // drop(cli);
-            delay_us(if bit {55} else {5})
-        }
+    fn write_bit(&mut self, high: bool) {
+        // let cli = DisableInterrupts::new();
+        self.write_low();
+        self.set_output();
+        self.delay_us(if high {10} else {65});
+        self.write_high();
+        // drop(cli);
+        self.delay_us(if high {55} else {5})
     }
 
 
-    fn disable_parasite_mode(&self) {
-        let cli = DisableInterrupts::new();
-        unsafe {
-            self.set_input();
-            self.write_low();
-        }
+    fn disable_parasite_mode(&mut self) {
+        // let cli = DisableInterrupts::new();
+        self.set_input();
+        self.write_low();
     }
 
-    pub fn pin(&self) -> *mut u8 {
-        self.pin
+    fn set_input(&mut self) {
+        self.output.float_high()
     }
 
-    pub fn ddr(&self) -> *mut u8 {
-        unsafe {
-            self.pin.offset(1)
-        }
+    fn set_output(&mut self) {
+        // nothing to do?
     }
 
-    pub fn port(&self) -> *mut u8 {
-        unsafe {
-            self.pin.offset(2)
-        }
+    fn write_low(&mut self) {
+        self.output.drain_low()
     }
 
-    unsafe fn set_input(&self) {
-        write_volatile(self.ddr(), read_volatile(self.ddr()) & !self.mask)
+    fn write_high(&mut self) {
+        self.output.float_high()
     }
 
-    unsafe fn set_output(&self) {
-        write_volatile(self.ddr(), read_volatile(self.ddr()) | self.mask)
+    fn read(&self) -> bool {
+        self.output.is_high()
     }
-
-    unsafe fn write_low(&self) {
-        write_volatile(self.port(), read_volatile(self.port()) & !self.mask)
-    }
-
-    unsafe fn write_high(&self) {
-        write_volatile(self.port(), read_volatile(self.port()) | self.mask)
-    }
-
-    unsafe fn read(&self) -> bool {
-        read_volatile(self.pin()) & self.mask == self.mask
+    
+    fn delay_us(&mut self, us: u8) {
+        self.output.delay_us(us)
     }
 }
