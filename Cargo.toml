@@ -4,7 +4,7 @@ version = "0.1.1"
 authors = ["Michael Watzko <michael@watzko.de>"]
 repository = "https://git.tallbyte.com/rust/onewire.git"
 description = "OneWire implementation for embedded rust, based on arduino OneWire library. WIP"
-keywords = ["embedded", "onewire", "arduino", "avr"]
+keywords = ["embedded", "onewire", "arduino", "avr", "stm32"]
 categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT"
 
