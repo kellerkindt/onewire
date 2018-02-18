@@ -9,12 +9,19 @@ extern crate embedded_hal as hal;
 use hal::digital::OutputPin;
 use hal::blocking::delay::DelayUs;
 
+#[repr(u8)]
+pub enum Command {
+    SelectRom = 0x55,
+    SearchNext = 0xF0,
+    SearchNextAlarmed = 0xEC,
+}
+
 #[derive(Debug)]
 pub enum OneWireError {
     WireNotHigh,
 }
 
-#[derive(Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct OneWireDevice {
     pub address: [u8; 8]
 }
@@ -58,16 +65,25 @@ impl<'a> OneWire<'a> {
         }
     }
 
+    pub fn select(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice) {
+        let parasite_mode = self.parasite_mode;
+        self.write_command(delay, Command::SelectRom, parasite_mode); // select
+        for i in 0..device.address.len() {
+            let last = i == device.address.len() - 1;
+            self.write_byte(delay, device.address[i], parasite_mode && last);
+        }
+    }
+
     pub fn search_next(&mut self, search: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<OneWireDevice>, OneWireError> {
-        self.search(search, delay, 0xF0)
+        self.search(search, delay, Command::SearchNext)
     }
 
     pub fn search_next_alarmed(&mut self, search: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<OneWireDevice>, OneWireError> {
-        self.search(search, delay, 0xEC)
+        self.search(search, delay, Command::SearchNextAlarmed)
     }
 
     /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
-    fn search(&mut self, rom: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>, command: u8) -> Result<Option<OneWireDevice>, OneWireError> {
+    fn search(&mut self, rom: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>, cmd: Command) -> Result<Option<OneWireDevice>, OneWireError> {
         let mut id_bit_number = 1_u8;
         let mut last_zero = 0_u8;
         let mut rom_byte_number = 0_usize;
@@ -85,7 +101,7 @@ impl<'a> OneWire<'a> {
                 return Ok(None);
             }
 
-            self.write_byte(delay, command, false);
+            self.write_byte(delay, cmd as u8, false);
 
             while rom_byte_number < 8 {
                 let id_bit = self.read_bit(delay);
@@ -236,6 +252,10 @@ impl<'a> OneWire<'a> {
         if !self.parasite_mode {
             self.disable_parasite_mode();
         }
+    }
+
+    fn write_command(&mut self, delay: &mut DelayUs<u16>, cmd: Command, parasite_mode: bool) {
+        self.write_byte(delay, cmd as u8, parasite_mode)
     }
 
     fn write_byte(&mut self, delay: &mut DelayUs<u16>, mut byte: u8, parasite_mode: bool) {
