@@ -71,10 +71,13 @@ impl<'a> OneWire<'a> {
         let mut id_bit_number = 1_u8;
         let mut last_zero = 0_u8;
         let mut rom_byte_number = 0_usize;
+        let mut rom_byte_mask = 1_u8;
         let mut search_result = false;
 
-        let mut rom_byte_mask = 0_u8;
         let mut search_direction = false;
+
+
+        let mut counter = 0_u8;
 
 
         if !rom.last_device_flag {
@@ -98,7 +101,7 @@ impl<'a> OneWire<'a> {
                         search_direction = id_bit;
                     } else {
                         if id_bit_number < rom.last_discrepancy {
-                            search_direction = rom.address[rom_byte_number] & rom_byte_mask > 0;
+                            search_direction = (rom.address[rom_byte_number] & rom_byte_mask) > 0;
                         } else {
                             search_direction = id_bit_number == rom.last_discrepancy;
                         }
@@ -205,9 +208,9 @@ impl<'a> OneWire<'a> {
     fn read_byte(&mut self, delay: &mut DelayUs<u16>) -> u8 {
         let mut byte = 0_u8;
         for _ in 0..8 {
-            byte <<= 1;
+            byte >>= 1;
             if self.read_bit(delay) {
-                byte |= 0x01;
+                byte |= 0x80;
             }
         }
         byte
@@ -262,28 +265,41 @@ impl<'a> OneWire<'a> {
         self.write_low();
     }
 
-    #[inline]
     fn set_input(&mut self) {
         self.output.set_high()
     }
 
-    #[inline]
     fn set_output(&mut self) {
         // nothing to do?
     }
 
-    #[inline]
     fn write_low(&mut self) {
         self.output.set_low()
     }
 
-    #[inline]
     fn write_high(&mut self) {
         self.output.set_high()
     }
 
-    #[inline]
     fn read(&self) -> bool {
         self.output.is_high()
+    }
+}
+
+use core::fmt::Display;
+use core::fmt::Formatter;
+
+impl Display for OneWireDevice {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            self.address[0],
+            self.address[1],
+            self.address[2],
+            self.address[3],
+            self.address[4],
+            self.address[5],
+            self.address[6],
+            self.address[7],
+        )
     }
 }
