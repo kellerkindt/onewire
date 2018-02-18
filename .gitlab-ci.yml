@@ -1,6 +1,6 @@
 mirror:
     image:
-        - name: "alpine/git:latest"
+        name: "alpine/git:latest"
     script:
         - config --global push.default simple
         - checkout ${CI_COMMIT_REF_NAME}
