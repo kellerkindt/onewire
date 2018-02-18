@@ -1,7 +1,7 @@
 mirror:
     image:
       name: alpine/git:latest
-      entrypoint: ["/bin/sh"]
+      entrypoint: ["/bin/bash"]
     script:
         - echo test 123
         - whereis git
