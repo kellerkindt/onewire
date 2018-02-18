@@ -2,8 +2,7 @@
 name = "onewire"
 version = "0.2.3"
 authors = ["Michael Watzko <michael@watzko.de>"]
-repository = "https://github.com/kellerkindt/onewire"
-website = "https://git.tallbyte.com/rust/onewire.git"
+repository = "https://git.tallbyte.com/rust/onewire.git"
 description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
 keywords = ["embedded", "onewire", "arduino", "avr", "stm32"]
 categories = ["embedded", "hardware-support", "no-std"]
