@@ -65,6 +65,25 @@ impl<'a> OneWire<'a> {
         }
     }
 
+    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8], read: &mut [u8]) {
+        self.reset(delay);
+        self.select(delay, device);
+        self.write_bytes(delay, write);
+        self.read_bytes(delay, read);
+    }
+
+    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, read: &mut [u8]) {
+        self.reset(delay);
+        self.select(delay, device);
+        self.read_bytes(delay, read);
+    }
+
+    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8]) {
+        self.reset(delay);
+        self.select(delay, device);
+        self.write_bytes(delay, write);
+    }
+
     pub fn select(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice) {
         let parasite_mode = self.parasite_mode;
         self.write_command(delay, Command::SelectRom, parasite_mode); // select
@@ -245,7 +264,7 @@ impl<'a> OneWire<'a> {
         val
     }
 
-    pub fn write(&mut self, delay: &mut DelayUs<u16>, bytes: &[u8]) {
+    pub fn write_bytes(&mut self, delay: &mut DelayUs<u16>, bytes: &[u8]) {
         for b in bytes {
             self.write_byte(delay, *b, false);
         }
