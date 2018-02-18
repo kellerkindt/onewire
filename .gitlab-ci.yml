@@ -1,5 +1,5 @@
 mirror:
-    image
+    image:
         - name: "alpine/git:latest"
     script:
         - config --global push.default simple
