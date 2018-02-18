@@ -3,8 +3,12 @@
 #![no_std]
 #![crate_name = "onewire"]
 
-
+extern crate byteorder;
 extern crate embedded_hal as hal;
+
+pub mod ds18b20;
+
+pub use ds18b20::DS18B20;
 
 use hal::digital::OutputPin;
 use hal::blocking::delay::DelayUs;
@@ -19,6 +23,7 @@ pub enum Command {
 #[derive(Debug)]
 pub enum OneWireError {
     WireNotHigh,
+    CrcMismatch(u8, u8)
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
@@ -65,23 +70,26 @@ impl<'a> OneWire<'a> {
         }
     }
 
-    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8], read: &mut [u8]) {
-        self.reset(delay);
+    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8], read: &mut [u8]) -> Result<(), OneWireError> {
+        self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
         self.read_bytes(delay, read);
+        Ok(())
     }
 
-    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, read: &mut [u8]) {
-        self.reset(delay);
+    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, read: &mut [u8]) -> Result<(), OneWireError> {
+        self.reset(delay)?;
         self.select(delay, device);
         self.read_bytes(delay, read);
+        Ok(())
     }
 
-    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8]) {
-        self.reset(delay);
+    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8]) -> Result<(), OneWireError> {
+        self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
+        Ok(())
     }
 
     pub fn select(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice) {
@@ -322,6 +330,36 @@ impl<'a> OneWire<'a> {
 
     fn read(&self) -> bool {
         self.output.is_high()
+    }
+
+    pub fn ensure_correct_rcr8(device: &OneWireDevice, data: &[u8], crc8: u8) -> Result<(), OneWireError> {
+        let computed = OneWire::compute_crc8(device, data);
+        if computed != crc8 {
+            Err(OneWireError::CrcMismatch(computed, crc8))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn compute_crc8(device: &OneWireDevice, data: &[u8]) -> u8 {
+        let crc = OneWire::compute_partial_crc8(0u8, &device.address[..]);
+        OneWire::compute_partial_crc8(crc, data)
+    }
+
+    pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
+        let mut crc = crc;
+        for byte in data.iter() {
+            let mut byte = *byte;
+            for i in 0..8 {
+                let mix = (crc ^ byte) & 0x01;
+                crc >>= 1;
+                if mix != 0x00 {
+                    crc ^= 0x8C;
+                }
+                byte >>= 1;
+            }
+        }
+        crc
     }
 }
 
