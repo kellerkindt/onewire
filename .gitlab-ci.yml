@@ -1,8 +1,9 @@
 mirror:
     image:
         name: "alpine/git:latest"
+        entrypoint: ["/bin/sh"]
     script:
-        - config --global push.default simple
-        - checkout ${CI_COMMIT_REF_NAME}
-        - push -q https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
+        - git config --global push.default simple
+        - git checkout ${CI_COMMIT_REF_NAME}
+        - git push -q https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
 
