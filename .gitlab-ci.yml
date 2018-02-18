@@ -1,6 +1,6 @@
 mirror:
     image:
-        name: "alpine/git:latest"
+        name: "github-push:latest"
         entrypoint: ["/bin/sh"]
     script:
         - git config --global push.default simple
