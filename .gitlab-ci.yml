@@ -1,6 +1,6 @@
 mirror:
     image:
-      name: alpine/git:latest
+      name: gitlab/gitlab-runner:latest
       entrypoint: ["/bin/bash"]
     script:
         - echo test 123
