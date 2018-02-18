@@ -23,7 +23,8 @@ pub enum Command {
 #[derive(Debug)]
 pub enum OneWireError {
     WireNotHigh,
-    CrcMismatch(u8, u8)
+    CrcMismatch(u8, u8),
+    FamilyCodeMismatch(u8, u8),
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]

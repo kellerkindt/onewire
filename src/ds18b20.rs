@@ -7,6 +7,8 @@ use OneWire;
 use OneWireError;
 use OneWireDevice;
 
+pub const FAMILY_CODE : u8 = 0x28;
+
 #[repr(u8)]
 pub enum Command {
     Convert = 0x44,
@@ -43,10 +45,21 @@ pub struct DS18B20 {
 }
 
 impl DS18B20 {
-    pub fn new(device: OneWireDevice) -> DS18B20 {
+    pub fn new(device: OneWireDevice) -> Result<DS18B20, OneWireError> {
+        if device.address[0] != FAMILY_CODE {
+            Err(OneWireError::FamilyCodeMismatch(FAMILY_CODE, device.address[0]))
+        } else {
+            Ok(DS18B20 {
+                device,
+                resolution: MeasureResolution::TC,
+            })
+        }
+    }
+
+    pub unsafe fn new_forced(device: OneWireDevice) -> DS18B20 {
         DS18B20 {
             device,
-            resolution: MeasureResolution::TC,
+            resolution: MeasureResolution::TC
         }
     }
 
