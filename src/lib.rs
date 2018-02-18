@@ -117,11 +117,7 @@ impl<'a> OneWire<'a> {
         let mut rom_byte_mask = 1_u8;
         let mut search_result = false;
 
-        let mut search_direction = false;
-
-
-        let mut counter = 0_u8;
-
+        let mut search_direction : bool;
 
         if !rom.last_device_flag {
             if !self.reset(delay)? {
@@ -350,7 +346,7 @@ impl<'a> OneWire<'a> {
         let mut crc = crc;
         for byte in data.iter() {
             let mut byte = *byte;
-            for i in 0..8 {
+            for _ in 0..8 {
                 let mix = (crc ^ byte) & 0x01;
                 crc >>= 1;
                 if mix != 0x00 {
