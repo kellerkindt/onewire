@@ -262,10 +262,10 @@ impl<'a> OneWire<'a> {
         self.write_low();
         delay.delay_us(3);
         self.set_input();
-        delay.delay_us(10);
+        delay.delay_us(2); // was 10
         let val = self.read();
         // drop(cli);
-        delay.delay_us(53);
+        delay.delay_us(61); // was 53
         val
     }
 
