@@ -1,6 +1,6 @@
 [package]
 name = "onewire"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Michael Watzko <michael@watzko.de>"]
 repository = "https://git.tallbyte.com/rust/onewire.git"
 description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
