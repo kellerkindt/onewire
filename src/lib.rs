@@ -21,28 +21,28 @@ pub enum Command {
 }
 
 #[derive(Debug)]
-pub enum OneWireError {
+pub enum Error {
     WireNotHigh,
     CrcMismatch(u8, u8),
     FamilyCodeMismatch(u8, u8),
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
-pub struct OneWireDevice {
+pub struct Device {
     pub address: [u8; 8]
 }
 
 #[derive(Clone)]
-pub struct OneWireDeviceSearch {
+pub struct DeviceSearch {
     address: [u8; 8],
     last_discrepancy: u8,
     last_family_discrepancy: u8,
     last_device_flag: bool
 }
 
-impl OneWireDeviceSearch {
-    pub fn new() -> OneWireDeviceSearch {
-        OneWireDeviceSearch {
+impl DeviceSearch {
+    pub fn new() -> DeviceSearch {
+        DeviceSearch {
             address: [0u8; 8],
             last_discrepancy: 0u8,
             last_device_flag: false,
@@ -50,8 +50,8 @@ impl OneWireDeviceSearch {
         }
     }
 
-    pub fn new_for_family(family: u8) -> OneWireDeviceSearch {
-        let mut search = OneWireDeviceSearch::new();
+    pub fn new_for_family(family: u8) -> DeviceSearch {
+        let mut search = DeviceSearch::new();
         search.address[0] = family;
         search
     }
@@ -71,7 +71,7 @@ impl<'a> OneWire<'a> {
         }
     }
 
-    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8], read: &mut [u8]) -> Result<(), OneWireError> {
+    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &Device, write: &[u8], read: &mut [u8]) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
@@ -79,21 +79,21 @@ impl<'a> OneWire<'a> {
         Ok(())
     }
 
-    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, read: &mut [u8]) -> Result<(), OneWireError> {
+    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &Device, read: &mut [u8]) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.read_bytes(delay, read);
         Ok(())
     }
 
-    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice, write: &[u8]) -> Result<(), OneWireError> {
+    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &Device, write: &[u8]) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
         Ok(())
     }
 
-    pub fn select(&mut self, delay: &mut DelayUs<u16>, device: &OneWireDevice) {
+    pub fn select(&mut self, delay: &mut DelayUs<u16>, device: &Device) {
         let parasite_mode = self.parasite_mode;
         self.write_command(delay, Command::SelectRom, parasite_mode); // select
         for i in 0..device.address.len() {
@@ -102,16 +102,16 @@ impl<'a> OneWire<'a> {
         }
     }
 
-    pub fn search_next(&mut self, search: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<OneWireDevice>, OneWireError> {
+    pub fn search_next(&mut self, search: &mut DeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<Device>, Error> {
         self.search(search, delay, Command::SearchNext)
     }
 
-    pub fn search_next_alarmed(&mut self, search: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<OneWireDevice>, OneWireError> {
+    pub fn search_next_alarmed(&mut self, search: &mut DeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<Device>, Error> {
         self.search(search, delay, Command::SearchNextAlarmed)
     }
 
     /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
-    fn search(&mut self, rom: &mut OneWireDeviceSearch, delay: &mut DelayUs<u16>, cmd: Command) -> Result<Option<OneWireDevice>, OneWireError> {
+    fn search(&mut self, rom: &mut DeviceSearch, delay: &mut DelayUs<u16>, cmd: Command) -> Result<Option<Device>, Error> {
         let mut id_bit_number = 1_u8;
         let mut last_zero = 0_u8;
         let mut rom_byte_number = 0_usize;
@@ -192,7 +192,7 @@ impl<'a> OneWire<'a> {
         }
 
         if search_result {
-            Ok(Some(OneWireDevice {
+            Ok(Some(Device {
                 address: rom.address
             }))
         } else {
@@ -204,7 +204,7 @@ impl<'a> OneWire<'a> {
     /// Returns Err(WireNotHigh) if the wire seems to be shortened,
     /// Ok(true) if presence pulse has been received and Ok(false)
     /// if no other device was detected but the wire seems to be ok
-    pub fn reset(&mut self, delay: &mut DelayUs<u16>) -> Result<bool, OneWireError> {
+    pub fn reset(&mut self, delay: &mut DelayUs<u16>) -> Result<bool, Error> {
         // let mut cli = DisableInterrupts::new();
         self.set_input();
         // drop(cli);
@@ -229,14 +229,14 @@ impl<'a> OneWire<'a> {
         Ok(val)
     }
 
-    fn ensure_wire_high(&mut self, delay: &mut DelayUs<u16>) -> Result<(), OneWireError> {
+    fn ensure_wire_high(&mut self, delay: &mut DelayUs<u16>) -> Result<(), Error> {
         for _ in 0..125 {
             if self.read() {
                 return Ok(());
             }
             delay.delay_us(2);
         }
-        Err(OneWireError::WireNotHigh)
+        Err(Error::WireNotHigh)
     }
 
     pub fn read_bytes(&mut self, delay: &mut DelayUs<u16>, dst: &mut [u8]) {
@@ -329,16 +329,16 @@ impl<'a> OneWire<'a> {
         self.output.is_high()
     }
 
-    pub fn ensure_correct_rcr8(device: &OneWireDevice, data: &[u8], crc8: u8) -> Result<(), OneWireError> {
+    pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
         let computed = OneWire::compute_crc8(device, data);
         if computed != crc8 {
-            Err(OneWireError::CrcMismatch(computed, crc8))
+            Err(Error::CrcMismatch(computed, crc8))
         } else {
             Ok(())
         }
     }
 
-    pub fn compute_crc8(device: &OneWireDevice, data: &[u8]) -> u8 {
+    pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
         let crc = OneWire::compute_partial_crc8(0u8, &device.address[..]);
         OneWire::compute_partial_crc8(crc, data)
     }
@@ -363,7 +363,7 @@ impl<'a> OneWire<'a> {
 use core::fmt::Display;
 use core::fmt::Formatter;
 
-impl Display for OneWireDevice {
+impl Display for Device {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self.address[0],

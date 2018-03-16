@@ -4,8 +4,8 @@ use byteorder::LittleEndian;
 use hal::blocking::delay::DelayUs;
 
 use OneWire;
-use OneWireError;
-use OneWireDevice;
+use Error;
+use Device;
 
 pub const FAMILY_CODE : u8 = 0x28;
 
@@ -40,14 +40,14 @@ impl MeasureResolution {
 }
 
 pub struct DS18B20 {
-    device: OneWireDevice,
+    device: Device,
     resolution: MeasureResolution,
 }
 
 impl DS18B20 {
-    pub fn new(device: OneWireDevice) -> Result<DS18B20, OneWireError> {
+    pub fn new(device: Device) -> Result<DS18B20, Error> {
         if device.address[0] != FAMILY_CODE {
-            Err(OneWireError::FamilyCodeMismatch(FAMILY_CODE, device.address[0]))
+            Err(Error::FamilyCodeMismatch(FAMILY_CODE, device.address[0]))
         } else {
             Ok(DS18B20 {
                 device,
@@ -56,19 +56,19 @@ impl DS18B20 {
         }
     }
 
-    pub unsafe fn new_forced(device: OneWireDevice) -> DS18B20 {
+    pub unsafe fn new_forced(device: Device) -> DS18B20 {
         DS18B20 {
             device,
             resolution: MeasureResolution::TC
         }
     }
 
-    pub fn measure_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<MeasureResolution, OneWireError> {
+    pub fn measure_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<MeasureResolution, Error> {
         wire.reset_select_write_only(delay, &self.device, &[Command::Convert as u8])?;
         Ok(self.resolution)
     }
 
-    pub fn read_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, OneWireError> {
+    pub fn read_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
         let mut scratchpad = [0u8; 9];
         wire.reset_select_write_read(delay, &self.device, &[Command::ReadScratchpad as u8], &mut scratchpad[..])?;
         OneWire::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
