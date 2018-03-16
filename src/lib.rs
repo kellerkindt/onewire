@@ -13,8 +13,8 @@ pub use ds18b20::DS18B20;
 use hal::digital::OutputPin;
 use hal::blocking::delay::DelayUs;
 
-const ADDRESS_BYTES : u8 = 8;
-const ADDRESS_BITS  : u8 = ADDRESS_BYTES * 8;
+pub const ADDRESS_BYTES : u8 = 8;
+pub const ADDRESS_BITS  : u8 = ADDRESS_BYTES * 8;
 
 #[repr(u8)]
 pub enum Command {
