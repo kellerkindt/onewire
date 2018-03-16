@@ -13,6 +13,9 @@ pub use ds18b20::DS18B20;
 use hal::digital::OutputPin;
 use hal::blocking::delay::DelayUs;
 
+const ADDRESS_BYTES : u8 = 8;
+const ADDRESS_BITS  : u8 = ADDRESS_BYTES * 8;
+
 #[repr(u8)]
 pub enum Command {
     SelectRom = 0x55,
@@ -25,6 +28,7 @@ pub enum Error {
     WireNotHigh,
     CrcMismatch(u8, u8),
     FamilyCodeMismatch(u8, u8),
+    Debug(Option<u8>),
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
@@ -32,21 +36,26 @@ pub struct Device {
     pub address: [u8; 8]
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum SearchState {
+    Initialized,
+    DeviceFound,
+    End,
+}
+
 #[derive(Clone)]
 pub struct DeviceSearch {
-    address: [u8; 8],
-    last_discrepancy: u8,
-    last_family_discrepancy: u8,
-    last_device_flag: bool
+    address:       [u8; 8],
+    discrepancies: [u8; 8],
+    state: SearchState,
 }
 
 impl DeviceSearch {
     pub fn new() -> DeviceSearch {
         DeviceSearch {
-            address: [0u8; 8],
-            last_discrepancy: 0u8,
-            last_device_flag: false,
-            last_family_discrepancy: 0,
+            address:       [0u8; ADDRESS_BYTES as usize],
+            discrepancies: [0u8; ADDRESS_BYTES as usize],
+            state:         SearchState::Initialized,
         }
     }
 
@@ -54,6 +63,83 @@ impl DeviceSearch {
         let mut search = DeviceSearch::new();
         search.address[0] = family;
         search
+    }
+
+    fn is_bit_set_in_address(&self, bit: u8) -> bool {
+        DeviceSearch::is_bit_set(&self.address, bit)
+    }
+
+    fn set_bit_in_address(&mut self, bit: u8) {
+        DeviceSearch::set_bit(&mut self.address, bit);
+    }
+
+    fn reset_bit_in_address(&mut self, bit: u8) {
+        DeviceSearch::reset_bit(&mut self.address, bit);
+    }
+
+    fn write_bit_in_address(&mut self, bit: u8, value: bool) {
+        if value {
+            self.set_bit_in_address(bit);
+        } else {
+            self.reset_bit_in_address(bit);
+        }
+    }
+
+    fn is_bit_set_in_discrepancies(&self, bit: u8) -> bool {
+        DeviceSearch::is_bit_set(&self.discrepancies, bit)
+    }
+
+    fn set_bit_in_discrepancy(&mut self, bit: u8) {
+        DeviceSearch::set_bit(&mut self.discrepancies, bit);
+    }
+
+    fn reset_bit_in_discrepancy(&mut self, bit: u8) {
+        DeviceSearch::reset_bit(&mut self.discrepancies, bit);
+    }
+
+    fn write_bit_in_discrepancy(&mut self, bit: u8, value: bool) {
+        if value {
+            self.set_bit_in_discrepancy(bit);
+        } else {
+            self.reset_bit_in_discrepancy(bit);
+        }
+    }
+
+    fn is_bit_set(array: &[u8], bit: u8) -> bool {
+        if bit / 8 >= array.len() as u8 {
+            return false;
+        }
+        let index = bit / 8;
+        let offset = bit % 8;
+        array[index as usize] & (0x01 << offset) != 0x00
+    }
+
+    fn set_bit(array: &mut [u8], bit: u8) {
+        if bit / 8 >= array.len() as u8 {
+            return;
+        }
+        let index = bit / 8;
+        let offset = bit % 8;
+        array[index as usize] |= (0x01 << offset)
+    }
+
+    fn reset_bit(array: &mut [u8], bit: u8) {
+        if bit / 8 >= array.len() as u8 {
+            return;
+        }
+        let index = bit / 8;
+        let offset = bit % 8;
+        array[index as usize] &= !(0x01 << offset)
+    }
+
+    pub fn last_discrepancy(&self) -> Option<u8> {
+        let mut result = None;
+        for i in 0..ADDRESS_BITS {
+            if self.is_bit_set_in_discrepancies(i) {
+                result = Some(i);
+            }
+        }
+        result
     }
 }
 
@@ -112,92 +198,83 @@ impl<'a> OneWire<'a> {
 
     /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
     fn search(&mut self, rom: &mut DeviceSearch, delay: &mut DelayUs<u16>, cmd: Command) -> Result<Option<Device>, Error> {
-        let mut id_bit_number = 1_u8;
-        let mut last_zero = 0_u8;
-        let mut rom_byte_number = 0_usize;
-        let mut rom_byte_mask = 1_u8;
-        let mut search_result = false;
+        if SearchState::End == rom.state {
+            return Ok(None);
+        }
 
-        let mut search_direction : bool;
+        let mut discrepancy_found = false;
+        let last_discrepancy = rom.last_discrepancy();
 
-        if !rom.last_device_flag {
-            if !self.reset(delay)? {
+        if !self.reset(delay)? {
+            return Ok(None);
+        }
+
+        self.write_byte(delay, cmd as u8, false);
+
+        if let Some(last_discrepancy) = last_discrepancy {
+            // walk previous path
+            for i in 0..last_discrepancy {
+                let bit0 = self.read_bit(delay);
+                let bit1 = self.read_bit(delay);
+
+                if bit0 && bit1 {
+                    // no device responded
+                    return Ok(None);
+
+                } else {
+                    rom.write_bit_in_address(i, bit0);
+                    rom.write_bit_in_discrepancy(i, bit0);
+                    self.write_bit(delay, bit0);
+                }
+            }
+        } else {
+            // no discrepancy and device found, meaning the one found is the only one
+            if rom.state == SearchState::DeviceFound {
+                rom.state = SearchState::End;
                 return Ok(None);
             }
+        }
 
-            self.write_byte(delay, cmd as u8, false);
+        for i in last_discrepancy.unwrap_or(0)..ADDRESS_BITS {
+            let bit0 = self.read_bit(delay); // normal bit
+            let bit1 = self.read_bit(delay); // complementar bit
 
-            while rom_byte_number < 8 {
-                let id_bit = self.read_bit(delay);
-                let cmp_id_bit = self.read_bit(delay);
+            if last_discrepancy.eq(&Some(i)) {
+                // be sure to go different path from before (go second path, thus writing 1)
+                rom.reset_bit_in_discrepancy(i);
+                rom.set_bit_in_address(i);
+                self.write_bit(delay, true);
 
-                // no device?
-                if id_bit && cmp_id_bit {
-                    break;
+            } else {
+                if bit0 && bit1 {
+                    // no response received
+                    return Ok(None);
+                }
+
+                if !bit0 && !bit1 {
+                    // addresses with 0 and 1
+                    // found new path, go first path by default (thus writing 0)
+                    discrepancy_found |= true;
+                    rom.set_bit_in_discrepancy(i);
+                    rom.reset_bit_in_address(i);
+                    self.write_bit(delay, false);
+
                 } else {
-                    // devices have 0 or 1
-                    if id_bit != cmp_id_bit {
-                        // bit write value for search
-                        search_direction = id_bit;
-                    } else {
-                        if id_bit_number < rom.last_discrepancy {
-                            search_direction = (rom.address[rom_byte_number] & rom_byte_mask) > 0;
-                        } else {
-                            search_direction = id_bit_number == rom.last_discrepancy;
-                        }
-                    }
-
-                    if !search_direction {
-                        last_zero = id_bit_number;
-
-                        if last_zero < 9 {
-                            rom.last_family_discrepancy = last_zero;
-                        }
-                    }
+                    // addresses only with bit0
+                    rom.write_bit_in_address(i, bit0);
+                    self.write_bit(delay, bit0);
                 }
-
-                if search_direction {
-                    rom.address[rom_byte_number] |= rom_byte_mask;
-                } else {
-                    rom.address[rom_byte_number] &= !rom_byte_mask;
-                }
-
-                self.write_bit(delay, search_direction);
-
-                id_bit_number += 1;
-                rom_byte_mask <<= 1;
-
-                if rom_byte_mask == 0 {
-                    rom_byte_number += 1;
-                    rom_byte_mask = 0x01;
-                }
-            }
-
-            if id_bit_number >= 65 {
-                rom.last_discrepancy = last_zero;
-
-                if rom.last_discrepancy == 0 {
-                    rom.last_device_flag = true;
-                }
-
-                search_result = true;
             }
         }
 
-        if !search_result || rom.address[0] == 0x00 {
-            rom.last_discrepancy = 0;
-            rom.last_device_flag = false;
-            rom.last_family_discrepancy = 0;
-            search_result = false;
-        }
-
-        if search_result {
-            Ok(Some(Device {
-                address: rom.address
-            }))
+        if !discrepancy_found || rom.last_discrepancy().is_none() {
+            rom.state = SearchState::End;
         } else {
-            Ok(None)
+            rom.state = SearchState::DeviceFound;
         }
+        Ok(Some(Device {
+            address: rom.address.clone()
+        }))
     }
 
     /// Performs a reset and listens for a presence pulse
