@@ -222,9 +222,10 @@ impl<'a> OneWire<'a> {
                     return Ok(None);
 
                 } else {
-                    rom.write_bit_in_address(i, bit0);
-                    rom.write_bit_in_discrepancy(i, bit0);
-                    self.write_bit(delay, bit0);
+                    let bit = rom.is_bit_set_in_address(i);
+                    // rom.write_bit_in_address(i, bit0);
+                    // rom.write_bit_in_discrepancy(i, bit);
+                    self.write_bit(delay, bit);
                 }
             }
         } else {
@@ -267,7 +268,7 @@ impl<'a> OneWire<'a> {
             }
         }
 
-        if !discrepancy_found || rom.last_discrepancy().is_none() {
+        if !discrepancy_found && rom.last_discrepancy().is_none() {
             rom.state = SearchState::End;
         } else {
             rom.state = SearchState::DeviceFound;
