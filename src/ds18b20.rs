@@ -87,4 +87,12 @@ impl Sensor for DS18B20 {
     fn family_code() -> u8 {
         FAMILY_CODE
     }
+
+    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error> {
+        Ok(self.measure_temperature(wire, delay)?.time_ms())
+    }
+
+    fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
+        self.read_temperature(wire, delay)
+    }
 }

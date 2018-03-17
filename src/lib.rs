@@ -464,4 +464,10 @@ impl Display for Device {
 
 pub trait Sensor {
     fn family_code() -> u8;
+
+    /// returns the milliseconds required to wait until the measurement finished
+    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error>;
+
+    /// returns the measured value
+    fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error>;
 }
