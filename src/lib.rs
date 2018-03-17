@@ -36,6 +36,12 @@ pub struct Device {
     pub address: [u8; 8]
 }
 
+impl Device {
+    pub fn family_code(&self) -> u8 {
+        self.address[0]
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum SearchState {
     Initialized,
