@@ -455,3 +455,7 @@ impl Display for Device {
         )
     }
 }
+
+pub trait Sensor {
+    fn family_code() -> u8;
+}

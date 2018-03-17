@@ -3,9 +3,10 @@ use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use hal::blocking::delay::DelayUs;
 
-use OneWire;
 use Error;
 use Device;
+use Sensor;
+use OneWire;
 
 pub const FAMILY_CODE : u8 = 0x28;
 
@@ -79,5 +80,11 @@ impl DS18B20 {
         let temp_u16 = LittleEndian::read_u16(&scratchpad[0..2]);
         let temp_f32 = temp_u16 as i16 as f32 / 16_f32;
         temp_f32
+    }
+}
+
+impl Sensor for DS18B20 {
+    fn family_code() -> u8 {
+        FAMILY_CODE
     }
 }
