@@ -1,3 +1,4 @@
+# version 1.0
 mirror:
     script:
         - git config --global push.default simple
