@@ -1,0 +1,7 @@
+mirror:
+    script:
+        - git config --global push.default simple
+        - git checkout ${CI_COMMIT_REF_NAME} -f master
+        - git push -q https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git
+
+
