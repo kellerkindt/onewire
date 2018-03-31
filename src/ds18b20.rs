@@ -1,7 +1,11 @@
 
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
+
 use hal::blocking::delay::DelayUs;
+
+use hal::digital::InputPin;
+use hal::digital::OutputPin;
 
 use Error;
 use Device;
@@ -64,15 +68,15 @@ impl DS18B20 {
         }
     }
 
-    pub fn measure_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<MeasureResolution, Error> {
+    pub fn measure_temperature<T: InputPin + OutputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<MeasureResolution, Error> {
         wire.reset_select_write_only(delay, &self.device, &[Command::Convert as u8])?;
         Ok(self.resolution)
     }
 
-    pub fn read_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
+    pub fn read_temperature<T: InputPin + OutputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
         let mut scratchpad = [0u8; 9];
         wire.reset_select_write_read(delay, &self.device, &[Command::ReadScratchpad as u8], &mut scratchpad[..])?;
-        OneWire::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
+        super::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
         Ok(DS18B20::read_temperature_from_scratchpad(&scratchpad))
     }
 
@@ -88,11 +92,11 @@ impl Sensor for DS18B20 {
         FAMILY_CODE
     }
 
-    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error> {
+    fn start_measurement<T: InputPin + OutputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<u16, Error> {
         Ok(self.measure_temperature(wire, delay)?.time_ms())
     }
 
-    fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
+    fn read_measurement<T: InputPin + OutputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
         self.read_temperature(wire, delay)
     }
 }
