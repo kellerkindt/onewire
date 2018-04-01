@@ -412,37 +412,39 @@ impl<'a> OneWire<'a> {
     fn read(&self) -> bool {
         self.output.is_high()
     }
+}
 
-    pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
-        let computed = OneWire::compute_crc8(device, data);
-        if computed != crc8 {
-            Err(Error::CrcMismatch(computed, crc8))
-        } else {
-            Ok(())
-        }
-    }
 
-    pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
-        let crc = OneWire::compute_partial_crc8(0u8, &device.address[..]);
-        OneWire::compute_partial_crc8(crc, data)
-    }
-
-    pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
-        let mut crc = crc;
-        for byte in data.iter() {
-            let mut byte = *byte;
-            for _ in 0..8 {
-                let mix = (crc ^ byte) & 0x01;
-                crc >>= 1;
-                if mix != 0x00 {
-                    crc ^= 0x8C;
-                }
-                byte >>= 1;
-            }
-        }
-        crc
+pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
+    let computed = compute_crc8(device, data);
+    if computed != crc8 {
+        Err(Error::CrcMismatch(computed, crc8))
+    } else {
+        Ok(())
     }
 }
+
+pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
+    let crc = compute_partial_crc8(0u8, &device.address[..]);
+    compute_partial_crc8(crc, data)
+}
+
+pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
+    let mut crc = crc;
+    for byte in data.iter() {
+        let mut byte = *byte;
+        for _ in 0..8 {
+            let mix = (crc ^ byte) & 0x01;
+            crc >>= 1;
+            if mix != 0x00 {
+                crc ^= 0x8C;
+            }
+            byte >>= 1;
+        }
+    }
+    crc
+}
+
 
 use core::fmt::Display;
 use core::fmt::Formatter;

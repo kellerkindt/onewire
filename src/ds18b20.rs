@@ -72,7 +72,7 @@ impl DS18B20 {
     pub fn read_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
         let mut scratchpad = [0u8; 9];
         wire.reset_select_write_read(delay, &self.device, &[Command::ReadScratchpad as u8], &mut scratchpad[..])?;
-        OneWire::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
+        super::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
         Ok(DS18B20::read_temperature_from_scratchpad(&scratchpad))
     }
 
