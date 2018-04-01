@@ -10,7 +10,6 @@ pub mod ds18b20;
 
 pub use ds18b20::DS18B20;
 
-use hal::digital::InputPin;
 use hal::digital::OutputPin;
 use hal::blocking::delay::DelayUs;
 
@@ -150,14 +149,14 @@ impl DeviceSearch {
     }
 }
 
-pub struct OneWire<T: OutputPin + InputPin> {
-    output: T,
+pub struct OneWire<'a> {
+    output: &'a mut OutputPin,
     parasite_mode: bool,
 }
 
-impl<T: OutputPin + InputPin> OneWire<T> {
+impl<'a> OneWire<'a> {
 
-    pub fn new(output: T, parasite_mode: bool) -> OneWire<T> {
+    pub fn new(output: &'a mut OutputPin, parasite_mode: bool) -> OneWire<'a> {
         OneWire {
             output,
             parasite_mode,
@@ -411,41 +410,38 @@ impl<T: OutputPin + InputPin> OneWire<T> {
     }
 
     fn read(&self) -> bool {
-        // self.output.is_high()
-        InputPin::is_high(&self.output)
+        self.output.is_high()
     }
-}
 
-
-
-pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
-    let computed = compute_crc8(device, data);
-    if computed != crc8 {
-        Err(Error::CrcMismatch(computed, crc8))
-    } else {
-        Ok(())
-    }
-}
-
-pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
-    let crc = compute_partial_crc8(0u8, &device.address[..]);
-    compute_partial_crc8(crc, data)
-}
-
-pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
-    let mut crc = crc;
-    for byte in data.iter() {
-        let mut byte = *byte;
-        for _ in 0..8 {
-            let mix = (crc ^ byte) & 0x01;
-            crc >>= 1;
-            if mix != 0x00 {
-                crc ^= 0x8C;
-            }
-            byte >>= 1;
+    pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
+        let computed = OneWire::compute_crc8(device, data);
+        if computed != crc8 {
+            Err(Error::CrcMismatch(computed, crc8))
+        } else {
+            Ok(())
         }
     }
-    crc
+
+    pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
+        let crc = OneWire::compute_partial_crc8(0u8, &device.address[..]);
+        OneWire::compute_partial_crc8(crc, data)
+    }
+
+    pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
+        let mut crc = crc;
+        for byte in data.iter() {
+            let mut byte = *byte;
+            for _ in 0..8 {
+                let mix = (crc ^ byte) & 0x01;
+                crc >>= 1;
+                if mix != 0x00 {
+                    crc ^= 0x8C;
+                }
+                byte >>= 1;
+            }
+        }
+        crc
+    }
 }
 
 use core::fmt::Display;
@@ -470,8 +466,8 @@ pub trait Sensor {
     fn family_code() -> u8;
 
     /// returns the milliseconds required to wait until the measurement finished
-    fn start_measurement<T: OutputPin+InputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<u16, Error>;
+    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error>;
 
     /// returns the measured value
-    fn read_measurement<T: OutputPin+InputPin>(&self, wire: &mut OneWire<T>, delay: &mut DelayUs<u16>) -> Result<f32, Error>;
+    fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error>;
 }
