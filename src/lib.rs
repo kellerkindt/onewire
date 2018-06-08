@@ -11,6 +11,7 @@ pub mod ds18b20;
 pub use ds18b20::DS18B20;
 
 use hal::digital::OutputPin;
+use hal::digital::InputPin;
 use hal::blocking::delay::DelayUs;
 
 pub const ADDRESS_BYTES : u8 = 8;
@@ -126,7 +127,7 @@ impl DeviceSearch {
         }
         let index = bit / 8;
         let offset = bit % 8;
-        array[index as usize] |= (0x01 << offset)
+        array[index as usize] |= 0x01 << offset
     }
 
     fn reset_bit(array: &mut [u8], bit: u8) {
@@ -149,14 +150,16 @@ impl DeviceSearch {
     }
 }
 
+pub trait OpenDrainOutput: OutputPin + InputPin {}
+impl<P: OutputPin + InputPin> OpenDrainOutput for P {}
+
 pub struct OneWire<'a> {
-    output: &'a mut OutputPin,
+    output: &'a mut OpenDrainOutput,
     parasite_mode: bool,
 }
 
 impl<'a> OneWire<'a> {
-
-    pub fn new(output: &'a mut OutputPin, parasite_mode: bool) -> OneWire<'a> {
+    pub fn new(output: &'a mut OpenDrainOutput, parasite_mode: bool) -> OneWire<'a> {
         OneWire {
             output,
             parasite_mode,
