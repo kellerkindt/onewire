@@ -1,12 +1,13 @@
 [package]
 name = "onewire"
-version = "0.3.7"
+version = "0.3.8"
 authors = ["Michael Watzko <michael@watzko.de>"]
 repository = "https://github.com/kellerkindt/onewire"
 description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
 keywords = ["embedded", "onewire", "arduino", "1wire", "stm32"]
 categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT"
+readme = "README.md"
 
 [lib]
 
