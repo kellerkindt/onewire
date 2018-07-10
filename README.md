@@ -3,7 +3,7 @@ Below is an example how to create a new OneWire instance, search for devices and
 
 ```rust
 fn main() -> ! {
-let mut cp: cortex_m::Peripherals = cortex_m::Peripherals::take().unwrap();
+    let mut cp: cortex_m::Peripherals = cortex_m::Peripherals::take().unwrap();
     let mut peripherals = stm32f103xx::Peripherals::take().unwrap();
     let mut flash = peripherals.FLASH.constrain();
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
