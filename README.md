@@ -1,5 +1,6 @@
 # How to use
-Below is an example how to create a new OneWire instance, search for devices and read the temperature from a [DS18B20](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwjY3ZaK3ZTcAhUwb5oKHeW1AaYQFghhMAA&url=https%3A%2F%2Fdatasheets.maximintegrated.com%2Fen%2Fds%2FDS18B20.pdf&usg=AOvVaw1BHiiWuK-ej9DummvLpx8c). 
+Below is an example how to create a new OneWire instance, search for devices and read the temperature from a [DS18B20](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwjY3ZaK3ZTcAhUwb5oKHeW1AaYQFghhMAA&url=https%3A%2F%2Fdatasheets.maximintegrated.com%2Fen%2Fds%2FDS18B20.pdf&usg=AOvVaw1BHiiWuK-ej9DummvLpx8c).
+The example currently requires the stm32f103xx-hal to be patched with this [PR](https://github.com/japaric/stm32f103xx-hal/pull/51).
 
 ```rust
 fn main() -> ! {
