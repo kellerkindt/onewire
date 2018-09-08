@@ -1,5 +1,3 @@
-#![feature(asm)]
-
 #![no_std]
 #![crate_name = "onewire"]
 
