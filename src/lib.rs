@@ -36,6 +36,24 @@ pub struct Device {
 }
 
 impl Device {
+    pub fn from_str(string: &str) -> Result<Device, ::core::num::ParseIntError> {
+        if string.len() < 23 {
+            let _ = u8::from_str_radix("", 16)?; // this causes a ParseIntError::Empty
+        }
+        Ok(Device {
+            address: [
+                u8::from_str_radix(&string[0..2], 16)?,
+                u8::from_str_radix(&string[3..5], 16)?,
+                u8::from_str_radix(&string[6..8], 16)?,
+                u8::from_str_radix(&string[9..11], 16)?,
+                u8::from_str_radix(&string[12..14], 16)?,
+                u8::from_str_radix(&string[15..17], 16)?,
+                u8::from_str_radix(&string[18..20], 16)?,
+                u8::from_str_radix(&string[21..23], 16)?,
+            ]
+        })
+    }
+
     pub fn family_code(&self) -> u8 {
         self.address[0]
     }
