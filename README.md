@@ -20,14 +20,14 @@ fn main() -> ! {
         
     let mut wire = OneWire::new(&mut one, false);
     
-    if wire.reset().is_err() {
+    if wire.reset(&mut delay).is_err() {
         // missing pullup or error on line
         loop {}
     }
     
     // search for devices
     let mut search = DeviceSearch::new();
-    while let Some(device) = wire.search_next(&mut search, delay).unwrap() {
+    while let Some(device) = wire.search_next(&mut search, &mut delay).unwrap() {
         match device.address[0] {
             ds18b20::FAMILY_CODE => {
                 let mut ds18b20 = DS18b20::new(device).unwrap();
