@@ -517,4 +517,6 @@ pub trait Sensor {
 
     /// returns the measured value
     fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error>;
+
+    fn read_measurement_raw(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error>;
 }
