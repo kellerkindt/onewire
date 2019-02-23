@@ -8,12 +8,12 @@ pub mod ds18b20;
 
 pub use ds18b20::DS18B20;
 
-use hal::digital::OutputPin;
-use hal::digital::InputPin;
 use hal::blocking::delay::DelayUs;
+use hal::digital::InputPin;
+use hal::digital::OutputPin;
 
-pub const ADDRESS_BYTES : u8 = 8;
-pub const ADDRESS_BITS  : u8 = ADDRESS_BYTES * 8;
+pub const ADDRESS_BYTES: u8 = 8;
+pub const ADDRESS_BITS: u8 = ADDRESS_BYTES * 8;
 
 #[repr(u8)]
 pub enum Command {
@@ -32,7 +32,7 @@ pub enum Error {
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Device {
-    pub address: [u8; 8]
+    pub address: [u8; 8],
 }
 
 impl Device {
@@ -50,7 +50,7 @@ impl Device {
                 u8::from_str_radix(&string[15..17], 16)?,
                 u8::from_str_radix(&string[18..20], 16)?,
                 u8::from_str_radix(&string[21..23], 16)?,
-            ]
+            ],
         })
     }
 
@@ -68,7 +68,7 @@ enum SearchState {
 
 #[derive(Clone)]
 pub struct DeviceSearch {
-    address:       [u8; 8],
+    address: [u8; 8],
     discrepancies: [u8; 8],
     state: SearchState,
 }
@@ -76,9 +76,9 @@ pub struct DeviceSearch {
 impl DeviceSearch {
     pub fn new() -> DeviceSearch {
         DeviceSearch {
-            address:       [0u8; ADDRESS_BYTES as usize],
+            address: [0u8; ADDRESS_BYTES as usize],
             discrepancies: [0u8; ADDRESS_BYTES as usize],
-            state:         SearchState::Initialized,
+            state: SearchState::Initialized,
         }
     }
 
@@ -182,7 +182,13 @@ impl<'a> OneWire<'a> {
         }
     }
 
-    pub fn reset_select_write_read(&mut self, delay: &mut DelayUs<u16>, device: &Device, write: &[u8], read: &mut [u8]) -> Result<(), Error> {
+    pub fn reset_select_write_read(
+        &mut self,
+        delay: &mut DelayUs<u16>,
+        device: &Device,
+        write: &[u8],
+        read: &mut [u8],
+    ) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
@@ -190,14 +196,24 @@ impl<'a> OneWire<'a> {
         Ok(())
     }
 
-    pub fn reset_select_read_only(&mut self, delay: &mut DelayUs<u16>, device: &Device, read: &mut [u8]) -> Result<(), Error> {
+    pub fn reset_select_read_only(
+        &mut self,
+        delay: &mut DelayUs<u16>,
+        device: &Device,
+        read: &mut [u8],
+    ) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.read_bytes(delay, read);
         Ok(())
     }
 
-    pub fn reset_select_write_only(&mut self, delay: &mut DelayUs<u16>, device: &Device, write: &[u8]) -> Result<(), Error> {
+    pub fn reset_select_write_only(
+        &mut self,
+        delay: &mut DelayUs<u16>,
+        device: &Device,
+        write: &[u8],
+    ) -> Result<(), Error> {
         self.reset(delay)?;
         self.select(delay, device);
         self.write_bytes(delay, write);
@@ -213,16 +229,29 @@ impl<'a> OneWire<'a> {
         }
     }
 
-    pub fn search_next(&mut self, search: &mut DeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<Device>, Error> {
+    pub fn search_next(
+        &mut self,
+        search: &mut DeviceSearch,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<Option<Device>, Error> {
         self.search(search, delay, Command::SearchNext)
     }
 
-    pub fn search_next_alarmed(&mut self, search: &mut DeviceSearch, delay: &mut DelayUs<u16>) -> Result<Option<Device>, Error> {
+    pub fn search_next_alarmed(
+        &mut self,
+        search: &mut DeviceSearch,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<Option<Device>, Error> {
         self.search(search, delay, Command::SearchNextAlarmed)
     }
 
     /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
-    fn search(&mut self, rom: &mut DeviceSearch, delay: &mut DelayUs<u16>, cmd: Command) -> Result<Option<Device>, Error> {
+    fn search(
+        &mut self,
+        rom: &mut DeviceSearch,
+        delay: &mut DelayUs<u16>,
+        cmd: Command,
+    ) -> Result<Option<Device>, Error> {
         if SearchState::End == rom.state {
             return Ok(None);
         }
@@ -245,7 +274,6 @@ impl<'a> OneWire<'a> {
                 if bit0 && bit1 {
                     // no device responded
                     return Ok(None);
-
                 } else {
                     let bit = rom.is_bit_set_in_address(i);
                     // rom.write_bit_in_address(i, bit0);
@@ -270,7 +298,6 @@ impl<'a> OneWire<'a> {
                 rom.reset_bit_in_discrepancy(i);
                 rom.set_bit_in_address(i);
                 self.write_bit(delay, true);
-
             } else {
                 if bit0 && bit1 {
                     // no response received
@@ -284,7 +311,6 @@ impl<'a> OneWire<'a> {
                     rom.set_bit_in_discrepancy(i);
                     rom.reset_bit_in_address(i);
                     self.write_bit(delay, false);
-
                 } else {
                     // addresses only with bit0
                     rom.write_bit_in_address(i, bit0);
@@ -299,7 +325,7 @@ impl<'a> OneWire<'a> {
             rom.state = SearchState::DeviceFound;
         }
         Ok(Some(Device {
-            address: rom.address.clone()
+            address: rom.address.clone(),
         }))
     }
 
@@ -399,12 +425,11 @@ impl<'a> OneWire<'a> {
         // let cli = DisableInterrupts::new();
         self.write_low();
         self.set_output();
-        delay.delay_us(if high {10} else {65});
+        delay.delay_us(if high { 10 } else { 65 });
         self.write_high();
         // drop(cli);
-        delay.delay_us(if high {55} else {5})
+        delay.delay_us(if high { 55 } else { 5 })
     }
-
 
     fn disable_parasite_mode(&mut self) {
         // let cli = DisableInterrupts::new();
@@ -432,7 +457,6 @@ impl<'a> OneWire<'a> {
         self.output.is_high()
     }
 }
-
 
 pub fn ensure_correct_rcr8(device: &Device, data: &[u8], crc8: u8) -> Result<(), Error> {
     let computed = compute_crc8(device, data);
@@ -464,13 +488,14 @@ pub fn compute_partial_crc8(crc: u8, data: &[u8]) -> u8 {
     crc
 }
 
-
 use core::fmt::Display;
 use core::fmt::Formatter;
 
 impl Display for Device {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
-        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+        write!(
+            f,
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self.address[0],
             self.address[1],
             self.address[2],
@@ -487,7 +512,8 @@ pub trait Sensor {
     fn family_code() -> u8;
 
     /// returns the milliseconds required to wait until the measurement finished
-    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error>;
+    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>)
+        -> Result<u16, Error>;
 
     /// returns the measured value
     fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error>;

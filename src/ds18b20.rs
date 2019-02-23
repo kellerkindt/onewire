@@ -1,14 +1,13 @@
-
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use hal::blocking::delay::DelayUs;
 
-use Error;
 use Device;
-use Sensor;
+use Error;
 use OneWire;
+use Sensor;
 
-pub const FAMILY_CODE : u8 = 0x28;
+pub const FAMILY_CODE: u8 = 0x28;
 
 #[repr(u8)]
 pub enum Command {
@@ -26,7 +25,7 @@ pub enum MeasureResolution {
     TC8 = 0b0001_1111,
     TC4 = 0b0011_1111,
     TC2 = 0b0101_1111,
-    TC  = 0b0111_1111,
+    TC = 0b0111_1111,
 }
 
 impl MeasureResolution {
@@ -35,7 +34,7 @@ impl MeasureResolution {
             &MeasureResolution::TC8 => 94,
             &MeasureResolution::TC4 => 188,
             &MeasureResolution::TC2 => 375,
-            &MeasureResolution::TC  => 750,
+            &MeasureResolution::TC => 750,
         }
     }
 }
@@ -60,19 +59,32 @@ impl DS18B20 {
     pub unsafe fn new_forced(device: Device) -> DS18B20 {
         DS18B20 {
             device,
-            resolution: MeasureResolution::TC
+            resolution: MeasureResolution::TC,
         }
     }
 
-    pub fn measure_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<MeasureResolution, Error> {
+    pub fn measure_temperature(
+        &self,
+        wire: &mut OneWire,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<MeasureResolution, Error> {
         wire.reset_select_write_only(delay, &self.device, &[Command::Convert as u8])?;
         Ok(self.resolution)
     }
 
-    pub fn read_temperature(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
+    pub fn read_temperature(
+        &self,
+        wire: &mut OneWire,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<f32, Error> {
         let mut scratchpad = [0u8; 9];
-        wire.reset_select_write_read(delay, &self.device, &[Command::ReadScratchpad as u8], &mut scratchpad[..])?;
-        super::ensure_correct_rcr8(&self.device,&scratchpad[..8], scratchpad[8])?;
+        wire.reset_select_write_read(
+            delay,
+            &self.device,
+            &[Command::ReadScratchpad as u8],
+            &mut scratchpad[..],
+        )?;
+        super::ensure_correct_rcr8(&self.device, &scratchpad[..8], scratchpad[8])?;
         Ok(DS18B20::read_temperature_from_scratchpad(&scratchpad))
     }
 
@@ -88,7 +100,11 @@ impl Sensor for DS18B20 {
         FAMILY_CODE
     }
 
-    fn start_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error> {
+    fn start_measurement(
+        &self,
+        wire: &mut OneWire,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<u16, Error> {
         Ok(self.measure_temperature(wire, delay)?.time_ms())
     }
 
