@@ -136,15 +136,15 @@ mod tests {
     use super::split_temp;
     #[test]
     fn test_temp_conv() {
-        assert_eq!((125, 0), split_temp(0x07d0));
-        assert_eq!((85, 0), split_temp(0x0550));
-        assert_eq!((25, 625), split_temp(0x0191)); // 25.0625
-        assert_eq!((10, 1250), split_temp(0x00A2)); // 10.125
-        assert_eq!((0, 5000), split_temp(0x0008)); // 0.5
-        assert_eq!((0, 0), split_temp(0x0000)); // 0
-        assert_eq!((0, -5000), split_temp(0xfff8)); // -0.5
-        assert_eq!((-10, -1250), split_temp(0xFF5E)); // -10.125
-        assert_eq!((-25, -625), split_temp(0xFE6F)); // -25.0625
-        assert_eq!((-55, 0), split_temp(0xFC90)); // -55
+        assert_eq!(split_temp(0x07d0), (125, 0));
+        assert_eq!(split_temp(0x0550), (85, 0));
+        assert_eq!(split_temp(0x0191), (25, 625)); // 25.0625
+        assert_eq!(split_temp(0x00A2), (10, 1250)); // 10.125
+        assert_eq!(split_temp(0x0008), (0, 5000)); // 0.5
+        assert_eq!(split_temp(0x0000), (0, 0)); // 0
+        assert_eq!(split_temp(0xfff8), (0, -5000)); // -0.5
+        assert_eq!(split_temp(0xFF5E), (-10, -1250)); // -10.125
+        assert_eq!(split_temp(0xFE6F), (-25, -625)); // -25.0625
+        assert_eq!(split_temp(0xFC90), (-55, 0)); // -55
     }
 }
