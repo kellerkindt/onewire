@@ -107,10 +107,15 @@ impl Sensor for DS18B20 {
     }
 
     fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
-        self.read_temperature(wire, delay).map(|t| t as i16 as f32 / 16_f32)
+        self.read_temperature(wire, delay)
+            .map(|t| t as i16 as f32 / 16_f32)
     }
 
-    fn read_measurement_raw(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<u16, Error> {
+    fn read_measurement_raw(
+        &self,
+        wire: &mut OneWire,
+        delay: &mut DelayUs<u16>,
+    ) -> Result<u16, Error> {
         self.read_temperature(wire, delay)
     }
 }
@@ -119,10 +124,10 @@ impl Sensor for DS18B20 {
 /// Original value may be calculated as: integer + fraction/10000
 pub fn split_temp(temperature: u16) -> (i16, i16) {
     if temperature < 0x8000 {
-        (temperature as i16 >>4, (temperature as i16 & 0xF)*625)
-    }else{
-        let abs = - (temperature as i16);
-        ( -(abs >> 4), -625*(abs & 0xF))
+        (temperature as i16 >> 4, (temperature as i16 & 0xF) * 625)
+    } else {
+        let abs = -(temperature as i16);
+        (-(abs >> 4), -625 * (abs & 0xF))
     }
 }
 
@@ -130,16 +135,16 @@ pub fn split_temp(temperature: u16) -> (i16, i16) {
 mod tests {
     use super::split_temp;
     #[test]
-    fn test_temp_conv(){
-        assert_eq!( (125,0),    split_temp(0x07d0));
-        assert_eq!( (85,0),     split_temp(0x0550));
-        assert_eq!( (25,625),   split_temp(0x0191)); // 25.0625
-        assert_eq!( (10,1250),  split_temp(0x00A2)); // 10.125
-        assert_eq!( (0,5000),   split_temp(0x0008)); // 0.5
-        assert_eq!( (0,0),      split_temp(0x0000)); // 0
-        assert_eq!( (0,-5000),  split_temp(0xfff8)); // -0.5
-        assert_eq!( (-10,-1250),split_temp(0xFF5E)); // -10.125
-        assert_eq!( (-25,-625), split_temp(0xFE6F)); // -25.0625
-        assert_eq!( (-55,0),    split_temp(0xFC90)); // -55
+    fn test_temp_conv() {
+        assert_eq!((125, 0), split_temp(0x07d0));
+        assert_eq!((85, 0), split_temp(0x0550));
+        assert_eq!((25, 625), split_temp(0x0191)); // 25.0625
+        assert_eq!((10, 1250), split_temp(0x00A2)); // 10.125
+        assert_eq!((0, 5000), split_temp(0x0008)); // 0.5
+        assert_eq!((0, 0), split_temp(0x0000)); // 0
+        assert_eq!((0, -5000), split_temp(0xfff8)); // -0.5
+        assert_eq!((-10, -1250), split_temp(0xFF5E)); // -10.125
+        assert_eq!((-25, -625), split_temp(0xFE6F)); // -25.0625
+        assert_eq!((-55, 0), split_temp(0xFC90)); // -55
     }
 }
