@@ -6,7 +6,7 @@ repository = "https://github.com/kellerkindt/onewire"
 description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
 keywords = ["embedded", "onewire", "embedded-hal-driver", "1wire", "stm32"]
 categories = ["embedded", "hardware-support", "no-std"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [lib]
