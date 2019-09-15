@@ -158,8 +158,8 @@ impl DeviceSearch {
     }
 }
 
-pub trait OpenDrainOutput: OutputPin<Error=()> + InputPin<Error=()> {}
-impl<P: OutputPin<Error=()> + InputPin<Error=()>> OpenDrainOutput for P {}
+pub trait OpenDrainOutput: OutputPin<Error = ()> + InputPin<Error = ()> {}
+impl<P: OutputPin<Error = ()> + InputPin<Error = ()>> OpenDrainOutput for P {}
 
 pub struct OneWire<'a> {
     output: &'a mut dyn OpenDrainOutput,
@@ -432,7 +432,7 @@ impl<'a> OneWire<'a> {
     fn set_input(&mut self) {
         match self.output.set_high() {
             Ok(_) => (),
-            Err(_) => (),  // TODO: Handle error?
+            Err(_) => (), // TODO: Handle error?
         }
     }
 
@@ -443,21 +443,21 @@ impl<'a> OneWire<'a> {
     fn write_low(&mut self) {
         match self.output.set_low() {
             Ok(_) => (),
-            Err(_) => (),  // TODO: Handle error?
+            Err(_) => (), // TODO: Handle error?
         }
     }
 
     fn write_high(&mut self) {
         match self.output.set_high() {
             Ok(_) => (),
-            Err(_) => (),  // TODO: Handle error?
+            Err(_) => (), // TODO: Handle error?
         }
     }
 
     fn read(&self) -> bool {
         match self.output.is_high() {
             Ok(v) => v,
-            Err(_) => false
+            Err(_) => false,
         }
     }
 }
