@@ -2,10 +2,10 @@ use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use hal::blocking::delay::DelayUs;
 
-use Device;
-use Error;
-use OneWire;
-use Sensor;
+use crate::Device;
+use crate::Error;
+use crate::OneWire;
+use crate::Sensor;
 
 pub const FAMILY_CODE: u8 = 0x28;
 
