@@ -9,8 +9,8 @@ pub mod ds18b20;
 pub use ds18b20::DS18B20;
 
 use hal::blocking::delay::DelayUs;
-use hal::digital::InputPin;
-use hal::digital::OutputPin;
+use hal::digital::v2::InputPin;
+use hal::digital::v2::OutputPin;
 
 pub const ADDRESS_BYTES: u8 = 8;
 pub const ADDRESS_BITS: u8 = ADDRESS_BYTES * 8;
@@ -158,8 +158,8 @@ impl DeviceSearch {
     }
 }
 
-pub trait OpenDrainOutput: OutputPin + InputPin {}
-impl<P: OutputPin + InputPin> OpenDrainOutput for P {}
+pub trait OpenDrainOutput: OutputPin<Error=()> + InputPin<Error=()> {}
+impl<P: OutputPin<Error=()> + InputPin<Error=()>> OpenDrainOutput for P {}
 
 pub struct OneWire<'a> {
     output: &'a mut dyn OpenDrainOutput,
@@ -430,7 +430,10 @@ impl<'a> OneWire<'a> {
     }
 
     fn set_input(&mut self) {
-        self.output.set_high()
+        match self.output.set_high() {
+            Ok(_) => (),
+            Err(_) => (),  // TODO: Handle error?
+        }
     }
 
     fn set_output(&mut self) {
@@ -438,15 +441,24 @@ impl<'a> OneWire<'a> {
     }
 
     fn write_low(&mut self) {
-        self.output.set_low()
+        match self.output.set_low() {
+            Ok(_) => (),
+            Err(_) => (),  // TODO: Handle error?
+        }
     }
 
     fn write_high(&mut self) {
-        self.output.set_high()
+        match self.output.set_high() {
+            Ok(_) => (),
+            Err(_) => (),  // TODO: Handle error?
+        }
     }
 
     fn read(&self) -> bool {
-        self.output.is_high()
+        match self.output.is_high() {
+            Ok(v) => v,
+            Err(_) => false
+        }
     }
 }
 
