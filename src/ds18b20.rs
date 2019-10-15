@@ -1,11 +1,11 @@
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use hal::blocking::delay::DelayUs;
+use crate::hal::blocking::delay::DelayUs;
 
-use Device;
-use Error;
-use OneWire;
-use Sensor;
+use crate::Device;
+use crate::Error;
+use crate::OneWire;
+use crate::Sensor;
 
 pub const FAMILY_CODE: u8 = 0x28;
 
@@ -66,7 +66,7 @@ impl DS18B20 {
     pub fn measure_temperature(
         &self,
         wire: &mut OneWire,
-        delay: &mut DelayUs<u16>,
+        delay: &mut dyn DelayUs<u16>,
     ) -> Result<MeasureResolution, Error> {
         wire.reset_select_write_only(delay, &self.device, &[Command::Convert as u8])?;
         Ok(self.resolution)
@@ -75,7 +75,7 @@ impl DS18B20 {
     pub fn read_temperature(
         &self,
         wire: &mut OneWire,
-        delay: &mut DelayUs<u16>,
+        delay: &mut dyn DelayUs<u16>,
     ) -> Result<u16, Error> {
         let mut scratchpad = [0u8; 9];
         wire.reset_select_write_read(
@@ -101,12 +101,12 @@ impl Sensor for DS18B20 {
     fn start_measurement(
         &self,
         wire: &mut OneWire,
-        delay: &mut DelayUs<u16>,
+        delay: &mut dyn DelayUs<u16>,
     ) -> Result<u16, Error> {
         Ok(self.measure_temperature(wire, delay)?.time_ms())
     }
 
-    fn read_measurement(&self, wire: &mut OneWire, delay: &mut DelayUs<u16>) -> Result<f32, Error> {
+    fn read_measurement(&self, wire: &mut OneWire, delay: &mut dyn DelayUs<u16>) -> Result<f32, Error> {
         self.read_temperature(wire, delay)
             .map(|t| t as i16 as f32 / 16_f32)
     }
@@ -114,7 +114,7 @@ impl Sensor for DS18B20 {
     fn read_measurement_raw(
         &self,
         wire: &mut OneWire,
-        delay: &mut DelayUs<u16>,
+        delay: &mut dyn DelayUs<u16>,
     ) -> Result<u16, Error> {
         self.read_temperature(wire, delay)
     }
