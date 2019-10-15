@@ -8,9 +8,9 @@ pub mod ds18b20;
 
 pub use crate::ds18b20::DS18B20;
 
-use crate::hal::blocking::delay::DelayUs;
-use crate::hal::digital::v2::InputPin;
-use crate::hal::digital::v2::OutputPin;
+use hal::blocking::delay::DelayUs;
+use hal::digital::v2::InputPin;
+use hal::digital::v2::OutputPin;
 
 pub const ADDRESS_BYTES: u8 = 8;
 pub const ADDRESS_BITS: u8 = ADDRESS_BYTES * 8;

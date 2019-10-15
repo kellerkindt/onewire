@@ -1,6 +1,6 @@
 use byteorder::ByteOrder;
 use byteorder::LittleEndian;
-use crate::hal::blocking::delay::DelayUs;
+use hal::blocking::delay::DelayUs;
 
 use crate::Device;
 use crate::Error;
@@ -106,7 +106,11 @@ impl Sensor for DS18B20 {
         Ok(self.measure_temperature(wire, delay)?.time_ms())
     }
 
-    fn read_measurement(&self, wire: &mut OneWire, delay: &mut dyn DelayUs<u16>) -> Result<f32, Error> {
+    fn read_measurement(
+        &self,
+        wire: &mut OneWire,
+        delay: &mut dyn DelayUs<u16>,
+    ) -> Result<f32, Error> {
         self.read_temperature(wire, delay)
             .map(|t| t as i16 as f32 / 16_f32)
     }
