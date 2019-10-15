@@ -9,8 +9,8 @@ pub mod ds18b20;
 pub use ds18b20::DS18B20;
 
 use hal::blocking::delay::DelayUs;
-use hal::digital::InputPin;
-use hal::digital::OutputPin;
+use hal::digital::v2::InputPin;
+use hal::digital::v2::OutputPin;
 
 pub const ADDRESS_BYTES: u8 = 8;
 pub const ADDRESS_BITS: u8 = ADDRESS_BYTES * 8;
@@ -166,8 +166,8 @@ impl DeviceSearch {
     }
 }
 
-pub trait OpenDrainOutput: OutputPin + InputPin {}
-impl<P: OutputPin + InputPin> OpenDrainOutput for P {}
+pub trait OpenDrainOutput: OutputPin<Error = void::Void> + InputPin<Error = void::Void> {}
+impl<P: OutputPin<Error = void::Void> + InputPin<Error = void::Void>> OpenDrainOutput for P {}
 
 pub struct OneWire<'a> {
     output: &'a mut OpenDrainOutput,
@@ -438,7 +438,7 @@ impl<'a> OneWire<'a> {
     }
 
     fn set_input(&mut self) {
-        self.output.set_high()
+        self.output.set_high();
     }
 
     fn set_output(&mut self) {
@@ -446,15 +446,16 @@ impl<'a> OneWire<'a> {
     }
 
     fn write_low(&mut self) {
-        self.output.set_low()
+        self.output.set_low();
     }
 
     fn write_high(&mut self) {
-        self.output.set_high()
+        self.output.set_high();
     }
 
     fn read(&self) -> bool {
-        self.output.is_high()
+        // is_low in stm32f1xx-hal return Ok only, so unwrap looks safe
+        self.output.is_high().unwrap()
     }
 }
 
