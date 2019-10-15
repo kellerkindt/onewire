@@ -1,6 +1,6 @@
 [package]
 name = "onewire"
-version = "0.3.12"
+version = "0.3.13"
 authors = ["Michael Watzko <michael@watzko.de>"]
 repository = "https://github.com/kellerkindt/onewire"
 description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
@@ -14,10 +14,6 @@ edition = "2018"
 
 [dependencies]
 byteorder = { version = "1", default-features = false }
-
-[dependencies.void]
-default-features = false
-version = "1.0.2"
 
 [dependencies.embedded-hal]
 features = ["unproven"]
