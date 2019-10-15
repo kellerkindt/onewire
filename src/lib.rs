@@ -438,7 +438,8 @@ impl<'a> OneWire<'a> {
     }
 
     fn set_input(&mut self) {
-        self.output.set_high();
+        // Error is Void and therefore unreachable
+        self.output.set_high().unwrap();
     }
 
     fn set_output(&mut self) {
@@ -446,15 +447,17 @@ impl<'a> OneWire<'a> {
     }
 
     fn write_low(&mut self) {
-        self.output.set_low();
+        // Error is Void and therefore unreachable
+        self.output.set_low().unwrap();
     }
 
     fn write_high(&mut self) {
-        self.output.set_high();
+        // Error is Void and therefore unreachable
+        self.output.set_high().unwrap();
     }
 
     fn read(&self) -> bool {
-        // is_low in stm32f1xx-hal return Ok only, so unwrap looks safe
+        // Error is Void and therefore unreachable
         self.output.is_high().unwrap()
     }
 }
