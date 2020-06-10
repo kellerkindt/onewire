@@ -1,3 +1,15 @@
+# OneWire
+
+This crate is an OneWire-Bus implementation ontop of generic `Input-` and `OutputPins` from the [embedded-hal](https://crates.io/crates/embedded-hal).
+
+[![Build Status](https://github.com/kellerkindt/onewire/workflows/Rust/badge.svg)](https://github.com/kellerkindt/onewire/actions?query=workflow%3ARust)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/kellerkindt/onewire)
+[![Crates.io](https://img.shields.io/crates/v/onewire.svg)](https://crates.io/crates/onewire)
+[![Documentation](https://docs.rs/onewire/badge.svg)](https://docs.rs/onewire)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/kellerkindt/onewire/issues/new)
+
+
+
 # How to use
 Below is an example how to create a new OneWire instance, search for devices and read the temperature from a [DS18B20](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwjY3ZaK3ZTcAhUwb5oKHeW1AaYQFghhMAA&url=https%3A%2F%2Fdatasheets.maximintegrated.com%2Fen%2Fds%2FDS18B20.pdf&usg=AOvVaw1BHiiWuK-ej9DummvLpx8c).
 The example currently requires the stm32f103xx-hal to be patched with this [PR](https://github.com/japaric/stm32f103xx-hal/pull/51).
