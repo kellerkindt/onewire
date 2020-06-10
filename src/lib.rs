@@ -25,7 +25,7 @@ pub enum Command {
 }
 
 #[derive(Debug)]
-pub enum Error<E: Debug> {
+pub enum Error<IOE: Sized + Debug> {
     WireNotHigh,
     CrcMismatch(u8, u8),
     FamilyCodeMismatch(u8, u8),
@@ -33,7 +33,7 @@ pub enum Error<E: Debug> {
     PortError(E),
 }
 
-impl<E: Debug> From<E> for Error<E> {
+impl<E: Sized + Debug> From<E> for Error<E> {
     fn from(e: E) -> Self {
         Error::PortError(e)
     }
@@ -173,18 +173,88 @@ impl DeviceSearch {
         }
         result
     }
+
+    pub fn into_iter<'a, ODO: OpenDrainOutput>(
+        self,
+        wire: &'a mut OneWire<ODO>,
+        delay: &'a mut impl DelayUs<u16>,
+    ) -> DeviceSearchIter<'a, ODO, impl DelayUs<u16>> {
+        DeviceSearchIter {
+            search: Some(self),
+            wire,
+            delay,
+        }
+    }
 }
 
-pub trait OpenDrainOutput<E>: OutputPin<Error = E> + InputPin<Error = E> {}
-impl<E, P: OutputPin<Error = E> + InputPin<Error = E>> OpenDrainOutput<E> for P {}
+pub struct DeviceSearchIter<'a, ODO: OpenDrainOutput, Delay: DelayUs<u16>> {
+    search: Option<DeviceSearch>,
+    wire: &'a mut OneWire<ODO>,
+    delay: &'a mut Delay,
+}
 
-pub struct OneWire<'a, E: Debug> {
-    output: &'a mut dyn OpenDrainOutput<E>,
+impl<'a, ODO: OpenDrainOutput, Delay: DelayUs<u16>> Iterator for DeviceSearchIter<'a, ODO, Delay> {
+    type Item = Result<Device, Error<ODO::Error>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut search = self.search.take()?;
+        let result = self
+            .wire
+            .search_next(&mut search, &mut *self.delay)
+            .transpose()?;
+        self.search = Some(search);
+        Some(result)
+    }
+}
+
+pub trait OpenDrainOutput {
+    type Error: Sized + Debug;
+
+    /// Is the input pin high?
+    fn is_high(&self) -> Result<bool, Self::Error>;
+
+    /// Is the input pin low?
+    fn is_low(&self) -> Result<bool, Self::Error>;
+
+    /// Drives the pin low
+    ///
+    /// *NOTE* the actual electrical state of the pin may not actually be low, e.g. due to external
+    /// electrical sources
+    fn set_low(&mut self) -> Result<(), Self::Error>;
+
+    /// Drives the pin high
+    ///
+    /// *NOTE* the actual electrical state of the pin may not actually be high, e.g. due to external
+    /// electrical sources
+    fn set_high(&mut self) -> Result<(), Self::Error>;
+}
+impl<E: Debug, P: OutputPin<Error = E> + InputPin<Error = E>> OpenDrainOutput for P {
+    type Error = E;
+
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        InputPin::is_high(self)
+    }
+
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        InputPin::is_low(self)
+    }
+
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        OutputPin::set_low(self)
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        OutputPin::set_high(self)
+    }
+}
+
+pub struct OneWire<ODO: OpenDrainOutput> {
+    output: ODO,
     parasite_mode: bool,
 }
 
-impl<'a, E: Debug> OneWire<'a, E> {
-    pub fn new(output: &'a mut dyn OpenDrainOutput<E>, parasite_mode: bool) -> Self {
+impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
+    pub fn new(output: ODO, parasite_mode: bool) -> Self {
         OneWire {
             output,
             parasite_mode,
@@ -193,7 +263,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
 
     pub fn reset_select_write_read(
         &mut self,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         device: &Device,
         write: &[u8],
         read: &mut [u8],
@@ -207,29 +277,35 @@ impl<'a, E: Debug> OneWire<'a, E> {
 
     pub fn reset_select_read_only(
         &mut self,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         device: &Device,
         read: &mut [u8],
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
         self.select(delay, device)?;
+        self.select(delay, device);
         self.read_bytes(delay, read)?;
         Ok(())
     }
 
     pub fn reset_select_write_only(
         &mut self,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         device: &Device,
         write: &[u8],
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
         self.select(delay, device)?;
+        self.select(delay, device);
         self.write_bytes(delay, write)?;
         Ok(())
     }
 
-    pub fn select(&mut self, delay: &mut dyn DelayUs<u16>, device: &Device) -> Result<(), E> {
+    pub fn select(
+        &mut self,
+        delay: &mut impl DelayUs<u16>,
+        device: &Device,
+    ) -> Result<(), Error<E>> {
         let parasite_mode = self.parasite_mode;
         self.write_command(delay, Command::SelectRom, parasite_mode)?; // select
         for i in 0..device.address.len() {
@@ -242,7 +318,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
     pub fn search_next(
         &mut self,
         search: &mut DeviceSearch,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
     ) -> Result<Option<Device>, Error<E>> {
         self.search(search, delay, Command::SearchNext)
     }
@@ -250,7 +326,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
     pub fn search_next_alarmed(
         &mut self,
         search: &mut DeviceSearch,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
     ) -> Result<Option<Device>, Error<E>> {
         self.search(search, delay, Command::SearchNextAlarmed)
     }
@@ -259,7 +335,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
     fn search(
         &mut self,
         rom: &mut DeviceSearch,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         cmd: Command,
     ) -> Result<Option<Device>, Error<E>> {
         if SearchState::End == rom.state {
@@ -343,7 +419,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
     /// Returns Err(WireNotHigh) if the wire seems to be shortened,
     /// Ok(true) if presence pulse has been received and Ok(false)
     /// if no other device was detected but the wire seems to be ok
-    pub fn reset(&mut self, delay: &mut dyn DelayUs<u16>) -> Result<bool, Error<E>> {
+    pub fn reset(&mut self, delay: &mut impl DelayUs<u16>) -> Result<bool, Error<E>> {
         // let mut cli = DisableInterrupts::new();
         self.set_input()?;
         // drop(cli);
@@ -368,7 +444,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
         Ok(val)
     }
 
-    fn ensure_wire_high(&mut self, delay: &mut dyn DelayUs<u16>) -> Result<(), Error<E>> {
+    fn ensure_wire_high(&mut self, delay: &mut impl DelayUs<u16>) -> Result<(), Error<E>> {
         for _ in 0..125 {
             if self.read()? {
                 return Ok(());
@@ -378,14 +454,14 @@ impl<'a, E: Debug> OneWire<'a, E> {
         Err(Error::WireNotHigh)
     }
 
-    pub fn read_bytes(&mut self, delay: &mut dyn DelayUs<u16>, dst: &mut [u8]) -> Result<(), E> {
+    pub fn read_bytes(&mut self, delay: &mut impl DelayUs<u16>, dst: &mut [u8]) -> Result<(), E> {
         for i in 0..dst.len() {
             dst[i] = self.read_byte(delay)?;
         }
         Ok(())
     }
 
-    fn read_byte(&mut self, delay: &mut dyn DelayUs<u16>) -> Result<u8, E> {
+    fn read_byte(&mut self, delay: &mut impl DelayUs<u16>) -> Result<u8, E> {
         let mut byte = 0_u8;
         for _ in 0..8 {
             byte >>= 1;
@@ -396,7 +472,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
         Ok(byte)
     }
 
-    fn read_bit(&mut self, delay: &mut dyn DelayUs<u16>) -> Result<bool, E> {
+    fn read_bit(&mut self, delay: &mut impl DelayUs<u16>) -> Result<bool, E> {
         // let cli = DisableInterrupts::new();
         self.set_output()?;
         self.write_low()?;
@@ -409,7 +485,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
         Ok(val?)
     }
 
-    pub fn write_bytes(&mut self, delay: &mut dyn DelayUs<u16>, bytes: &[u8]) -> Result<(), E> {
+    pub fn write_bytes(&mut self, delay: &mut impl DelayUs<u16>, bytes: &[u8]) -> Result<(), E> {
         for b in bytes {
             self.write_byte(delay, *b, false)?;
         }
@@ -421,7 +497,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
 
     fn write_command(
         &mut self,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         cmd: Command,
         parasite_mode: bool,
     ) -> Result<(), E> {
@@ -430,7 +506,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
 
     fn write_byte(
         &mut self,
-        delay: &mut dyn DelayUs<u16>,
+        delay: &mut impl DelayUs<u16>,
         mut byte: u8,
         parasite_mode: bool,
     ) -> Result<(), E> {
@@ -444,7 +520,7 @@ impl<'a, E: Debug> OneWire<'a, E> {
         Ok(())
     }
 
-    fn write_bit(&mut self, delay: &mut dyn DelayUs<u16>, high: bool) -> Result<(), E> {
+    fn write_bit(&mut self, delay: &mut impl DelayUs<u16>, high: bool) -> Result<(), E> {
         // let cli = DisableInterrupts::new();
         self.write_low()?;
         self.set_output()?;
@@ -538,22 +614,22 @@ pub trait Sensor {
     fn family_code() -> u8;
 
     /// returns the milliseconds required to wait until the measurement finished
-    fn start_measurement<E: Debug>(
+    fn start_measurement<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<u16, Error<E>>;
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<u16, Error<O::Error>>;
 
     /// returns the measured value
-    fn read_measurement<E: Debug>(
+    fn read_measurement<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<f32, Error<E>>;
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<f32, Error<O::Error>>;
 
-    fn read_measurement_raw<E: Debug>(
+    fn read_measurement_raw<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<u16, Error<E>>;
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<u16, Error<O::Error>>;
 }

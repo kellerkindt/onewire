@@ -3,10 +3,11 @@ use byteorder::LittleEndian;
 use core::fmt::Debug;
 use hal::blocking::delay::DelayUs;
 
-use crate::Device;
 use crate::Error;
 use crate::OneWire;
 use crate::Sensor;
+use crate::{Device, OpenDrainOutput};
+use core::convert::Infallible;
 
 pub const FAMILY_CODE: u8 = 0x28;
 
@@ -46,7 +47,7 @@ pub struct DS18B20 {
 }
 
 impl DS18B20 {
-    pub fn new<E: Debug>(device: Device) -> Result<DS18B20, Error<E>> {
+    pub fn new(device: Device) -> Result<DS18B20, Error<Infallible>> {
         if device.address[0] != FAMILY_CODE {
             Err(Error::FamilyCodeMismatch(FAMILY_CODE, device.address[0]))
         } else {
@@ -64,20 +65,20 @@ impl DS18B20 {
         }
     }
 
-    pub fn measure_temperature<E: Debug>(
+    pub fn measure_temperature<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<MeasureResolution, Error<E>> {
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<MeasureResolution, Error<O::Error>> {
         wire.reset_select_write_only(delay, &self.device, &[Command::Convert as u8])?;
         Ok(self.resolution)
     }
 
-    pub fn read_temperature<E: Debug>(
+    pub fn read_temperature<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<u16, Error<E>> {
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<u16, Error<O::Error>> {
         let mut scratchpad = [0u8; 9];
         wire.reset_select_write_read(
             delay,
@@ -99,28 +100,28 @@ impl Sensor for DS18B20 {
         FAMILY_CODE
     }
 
-    fn start_measurement<E: Debug>(
+    fn start_measurement<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<u16, Error<E>> {
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<u16, Error<O::Error>> {
         Ok(self.measure_temperature(wire, delay)?.time_ms())
     }
 
-    fn read_measurement<E: Debug>(
+    fn read_measurement<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<f32, Error<E>> {
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<f32, Error<O::Error>> {
         self.read_temperature(wire, delay)
             .map(|t| t as i16 as f32 / 16_f32)
     }
 
-    fn read_measurement_raw<E: Debug>(
+    fn read_measurement_raw<O: OpenDrainOutput>(
         &self,
-        wire: &mut OneWire<E>,
-        delay: &mut dyn DelayUs<u16>,
-    ) -> Result<u16, Error<E>> {
+        wire: &mut OneWire<O>,
+        delay: &mut impl DelayUs<u16>,
+    ) -> Result<u16, Error<O::Error>> {
         self.read_temperature(wire, delay)
     }
 }
