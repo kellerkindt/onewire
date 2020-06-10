@@ -33,10 +33,10 @@ pub enum MeasureResolution {
 impl MeasureResolution {
     pub fn time_ms(&self) -> u16 {
         match self {
-            &MeasureResolution::TC8 => 94,
-            &MeasureResolution::TC4 => 188,
-            &MeasureResolution::TC2 => 375,
-            &MeasureResolution::TC => 750,
+            MeasureResolution::TC8 => 94,
+            MeasureResolution::TC4 => 188,
+            MeasureResolution::TC2 => 375,
+            MeasureResolution::TC => 750,
         }
     }
 }
@@ -58,6 +58,10 @@ impl DS18B20 {
         }
     }
 
+    /// # Safety
+    ///
+    /// This is marked as unsafe because it does not check whether the given address
+    /// is compatible with a DS18B20 device. It assumes so.
     pub unsafe fn new_forced(device: Device) -> DS18B20 {
         DS18B20 {
             device,

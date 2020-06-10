@@ -25,7 +25,7 @@ pub enum Command {
 }
 
 #[derive(Debug)]
-pub enum Error<IOE: Sized + Debug> {
+pub enum Error<E: Sized + Debug> {
     WireNotHigh,
     CrcMismatch(u8, u8),
     FamilyCodeMismatch(u8, u8),
@@ -45,26 +45,30 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn from_str(string: &str) -> Result<Device, ::core::num::ParseIntError> {
-        if string.len() < 23 {
+    pub fn family_code(&self) -> u8 {
+        self.address[0]
+    }
+}
+
+impl core::str::FromStr for Device {
+    type Err = core::num::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() < 23 {
             let _ = u8::from_str_radix("", 16)?; // this causes a ParseIntError::Empty
         }
         Ok(Device {
             address: [
-                u8::from_str_radix(&string[0..2], 16)?,
-                u8::from_str_radix(&string[3..5], 16)?,
-                u8::from_str_radix(&string[6..8], 16)?,
-                u8::from_str_radix(&string[9..11], 16)?,
-                u8::from_str_radix(&string[12..14], 16)?,
-                u8::from_str_radix(&string[15..17], 16)?,
-                u8::from_str_radix(&string[18..20], 16)?,
-                u8::from_str_radix(&string[21..23], 16)?,
+                u8::from_str_radix(&s[0..2], 16)?,
+                u8::from_str_radix(&s[3..5], 16)?,
+                u8::from_str_radix(&s[6..8], 16)?,
+                u8::from_str_radix(&s[9..11], 16)?,
+                u8::from_str_radix(&s[12..14], 16)?,
+                u8::from_str_radix(&s[15..17], 16)?,
+                u8::from_str_radix(&s[18..20], 16)?,
+                u8::from_str_radix(&s[21..23], 16)?,
             ],
         })
-    }
-
-    pub fn family_code(&self) -> u8 {
-        self.address[0]
     }
 }
 
@@ -75,7 +79,13 @@ enum SearchState {
     End,
 }
 
-#[derive(Clone)]
+impl Default for SearchState {
+    fn default() -> Self {
+        SearchState::Initialized
+    }
+}
+
+#[derive(Clone, Default)]
 pub struct DeviceSearch {
     address: [u8; 8],
     discrepancies: [u8; 8],
@@ -84,11 +94,7 @@ pub struct DeviceSearch {
 
 impl DeviceSearch {
     pub fn new() -> DeviceSearch {
-        DeviceSearch {
-            address: [0u8; ADDRESS_BYTES as usize],
-            discrepancies: [0u8; ADDRESS_BYTES as usize],
-            state: SearchState::Initialized,
-        }
+        DeviceSearch::default()
     }
 
     pub fn new_for_family(family: u8) -> DeviceSearch {
@@ -129,6 +135,7 @@ impl DeviceSearch {
         DeviceSearch::reset_bit(&mut self.discrepancies, bit);
     }
 
+    #[allow(unused)] // useful method anyway?
     fn write_bit_in_discrepancy(&mut self, bit: u8, value: bool) {
         if value {
             self.set_bit_in_discrepancy(bit);
@@ -283,7 +290,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
         self.select(delay, device)?;
-        self.select(delay, device);
+        self.select(delay, device)?;
         self.read_bytes(delay, read)?;
         Ok(())
     }
@@ -296,7 +303,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
         self.select(delay, device)?;
-        self.select(delay, device);
+        self.select(delay, device)?;
         self.write_bytes(delay, write)?;
         Ok(())
     }
@@ -411,7 +418,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
             rom.state = SearchState::DeviceFound;
         }
         Ok(Some(Device {
-            address: rom.address.clone(),
+            address: rom.address,
         }))
     }
 
@@ -455,8 +462,8 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     }
 
     pub fn read_bytes(&mut self, delay: &mut impl DelayUs<u16>, dst: &mut [u8]) -> Result<(), E> {
-        for i in 0..dst.len() {
-            dst[i] = self.read_byte(delay)?;
+        for d in dst {
+            *d = self.read_byte(delay)?;
         }
         Ok(())
     }
