@@ -41,7 +41,7 @@ impl<E: Sized + Debug> From<E> for Error<E> {
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Device {
-    pub address: [u8; 8],
+    pub address: [u8; ADDRESS_BYTES as usize],
 }
 
 impl Device {
@@ -489,7 +489,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         let val = self.read();
         // drop(cli);
         delay.delay_us(61); // was 53
-        Ok(val?)
+        val
     }
 
     pub fn write_bytes(&mut self, delay: &mut impl DelayUs<u16>, bytes: &[u8]) -> Result<(), E> {
