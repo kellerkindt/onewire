@@ -290,7 +290,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
         self.select(delay, device)?;
-        self.select(delay, device)?;
         self.read_bytes(delay, read)?;
         Ok(())
     }
@@ -302,7 +301,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         write: &[u8],
     ) -> Result<(), Error<E>> {
         self.reset(delay)?;
-        self.select(delay, device)?;
         self.select(delay, device)?;
         self.write_bytes(delay, write)?;
         Ok(())
