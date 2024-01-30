@@ -14,7 +14,4 @@ edition = "2018"
 
 [dependencies]
 byteorder = { version = "1", default-features = false }
-
-[dependencies.embedded-hal]
-features = ["unproven"]
-version = "0.2.1"
+embedded-hal = "1.0.0"
