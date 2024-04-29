@@ -3,12 +3,12 @@ name = "onewire"
 version = "0.3.13"
 authors = ["Michael Watzko <michael@watzko.de>"]
 repository = "https://github.com/kellerkindt/onewire"
-description = "OneWire implementation using embedded_hal as abstraction layer, based on arduino OneWire library. WIP"
+description = "OneWire implementation using embedded_hal as abstraction layer, based on Arduino OneWire library"
 keywords = ["embedded", "onewire", "embedded-hal-driver", "1wire", "stm32"]
 categories = ["embedded", "hardware-support", "no-std"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
 
 [lib]
 
