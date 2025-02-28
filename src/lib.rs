@@ -27,14 +27,8 @@ pub enum Command {
 #[derive(Debug)]
 pub enum Error<E: Sized + Debug> {
     WireNotHigh,
-    CrcMismatch {
-        computed: u8,
-        expected: u8,
-    },
-    FamilyCodeMismatch {
-        expected: u8,
-        actual: u8,
-    },
+    CrcMismatch { computed: u8, expected: u8 },
+    FamilyCodeMismatch { expected: u8, actual: u8 },
     Debug(Option<u8>),
     PortError(E),
 }
@@ -51,17 +45,29 @@ impl<E: Sized + Debug> defmt::Format for Error<E> {
         use defmt::write;
         match self {
             Error::WireNotHigh => write!(fmt, "WireNotHigh"),
-            Error::CrcMismatch { expected, computed } => write!(fmt, "CrcMismatch {{ expected: {:04x}, computed: {:04x} }}", expected, computed),
-            Error::FamilyCodeMismatch { expected, actual } => write!(fmt, "FamilyCodeMismatch {{ expected: {:04x}, actual: {:04x} }}", expected, actual),
+            Error::CrcMismatch { expected, computed } => write!(
+                fmt,
+                "CrcMismatch {{ expected: {:04x}, computed: {:04x} }}",
+                expected, computed
+            ),
+            Error::FamilyCodeMismatch { expected, actual } => write!(
+                fmt,
+                "FamilyCodeMismatch {{ expected: {:04x}, actual: {:04x} }}",
+                expected, actual
+            ),
             Error::Debug(value) => write!(fmt, "Debug {{ value: {:#04x} }}", value),
             #[cfg(feature = "defmt-debug2format")]
-            Error::PortError(e) => defmt::write!(fmt, "PortError {{ e: {:?} }}", defmt::Debug2Format(e)),
+            Error::PortError(e) => {
+                defmt::write!(fmt, "PortError {{ e: {:?} }}", defmt::Debug2Format(e))
+            }
             #[cfg(not(feature = "defmt-debug2format"))]
-            Error::PortError(_) => defmt::write!(fmt, "PortError {{ <enable onewire:defmt-debug2format to see more> }}"),
+            Error::PortError(_) => defmt::write!(
+                fmt,
+                "PortError {{ <enable onewire:defmt-debug2format to see more> }}"
+            ),
         }
     }
 }
-
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Device {
@@ -71,7 +77,18 @@ pub struct Device {
 #[cfg(feature = "defmt")]
 impl defmt::Format for Device {
     fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "Device {{ address: {:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x} }}", self.address[0], self.address[1], self.address[2], self.address[3], self.address[4], self.address[5], self.address[6], self.address[7]);
+        defmt::write!(
+            fmt,
+            "Device {{ address: {:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x} }}",
+            self.address[0],
+            self.address[1],
+            self.address[2],
+            self.address[3],
+            self.address[4],
+            self.address[5],
+            self.address[6],
+            self.address[7]
+        );
     }
 }
 
@@ -337,11 +354,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Ok(())
     }
 
-    pub fn select(
-        &mut self,
-        delay: &mut impl DelayNs,
-        device: &Device,
-    ) -> Result<(), Error<E>> {
+    pub fn select(&mut self, delay: &mut impl DelayNs, device: &Device) -> Result<(), Error<E>> {
         let parasite_mode = self.parasite_mode;
         self.write_command(delay, Command::SelectRom, parasite_mode)?; // select
         for i in 0..device.address.len() {
@@ -602,7 +615,10 @@ pub fn ensure_correct_rcr8<E: Debug>(
 ) -> Result<(), Error<E>> {
     let computed = compute_crc8(device, data);
     if computed != crc8 {
-        Err(Error::CrcMismatch{ computed, expected: crc8 } )
+        Err(Error::CrcMismatch {
+            computed,
+            expected: crc8,
+        })
     } else {
         Ok(())
     }
