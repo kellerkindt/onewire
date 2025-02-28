@@ -15,3 +15,8 @@ edition = "2021"
 [dependencies]
 byteorder = { version = "1", default-features = false }
 embedded-hal = "1.0.0"
+defmt = { version = "0.3.10", optional = true }
+
+[features]
+default = []
+defmt-debug2format = []
