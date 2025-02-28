@@ -51,10 +51,13 @@ impl<E: Sized + Debug> defmt::Format for Error<E> {
         use defmt::write;
         match self {
             Error::WireNotHigh => write!(fmt, "WireNotHigh"),
-            Error::CrcMismatch { expected, computed } => write!(fmt, "CrcMismatch { expected: {:#04x}, computed: {:#04x} }", expected, computed),
-            Error::FamilyCodeMismatch { expected, actual } => write!(fmt, "FamilyCodeMismatch { expected: {:#04x}, actual: {:#04x} }", expected, actual),
-            Error::Debug(value) => write!(fmt, "Debug { value: {:#04x} }", value),
-            Error::PortError(e) => write!(fmt, "PortError { e: {:#?} }", e),
+            Error::CrcMismatch { expected, computed } => write!(fmt, "CrcMismatch {{ expected: {:04x}, computed: {:04x} }}", expected, computed),
+            Error::FamilyCodeMismatch { expected, actual } => write!(fmt, "FamilyCodeMismatch {{ expected: {:04x}, actual: {:04x} }}", expected, actual),
+            Error::Debug(value) => write!(fmt, "Debug {{ value: {:#04x} }}", value),
+            #[cfg(feature = "defmt-debug2format")]
+            Error::PortError(e) => defmt::write!(fmt, "PortError {{ e: {:?} }}", defmt::Debug2Format(e)),
+            #[cfg(not(feature = "defmt-debug2format"))]
+            Error::PortError(_) => defmt::write!(fmt, "PortError {{ <enable onewire:defmt-debug2format to see more> }}"),
         }
     }
 }
