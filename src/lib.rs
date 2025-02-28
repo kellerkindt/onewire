@@ -68,6 +68,13 @@ pub struct Device {
     pub address: [u8; ADDRESS_BYTES as usize],
 }
 
+#[cfg(feature = "defmt")]
+impl defmt::Format for Device {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "Device {{ address: {:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x}{:04x} }}", self.address[0], self.address[1], self.address[2], self.address[3], self.address[4], self.address[5], self.address[6], self.address[7]);
+    }
+}
+
 impl Device {
     pub fn family_code(&self) -> u8 {
         self.address[0]
