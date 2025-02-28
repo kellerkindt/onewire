@@ -77,7 +77,7 @@ pub struct Device {
 #[cfg(feature = "defmt")]
 impl defmt::Format for Device {
     fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "Device {{ address: {=[u8; 8]:02x} }}", self.address);
+        defmt::write!(fmt, "Device {{ address: {=[u8; 8]:#04x} }}", self.address);
     }
 }
 
