@@ -45,6 +45,21 @@ impl<E: Sized + Debug> From<E> for Error<E> {
     }
 }
 
+#[cfg(feature = "defmt")]
+impl<E: Sized + Debug> defmt::Format for Error<E> {
+    fn format(&self, fmt: defmt::Formatter) {
+        use defmt::write;
+        match self {
+            Error::WireNotHigh => write!(fmt, "WireNotHigh"),
+            Error::CrcMismatch { expected, computed } => write!(fmt, "CrcMismatch { expected: {:#04x}, computed: {:#04x} }", expected, computed),
+            Error::FamilyCodeMismatch { expected, actual } => write!(fmt, "FamilyCodeMismatch { expected: {:#04x}, actual: {:#04x} }", expected, actual),
+            Error::Debug(value) => write!(fmt, "Debug { value: {:#04x} }", value),
+            Error::PortError(e) => write!(fmt, "PortError { e: {:#?} }", e),
+        }
+    }
+}
+
+
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Device {
     pub address: [u8; ADDRESS_BYTES as usize],
