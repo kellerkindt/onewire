@@ -49,7 +49,7 @@ pub struct DS18B20 {
 impl DS18B20 {
     pub fn new(device: Device) -> Result<DS18B20, Error<Infallible>> {
         if device.address[0] != FAMILY_CODE {
-            Err(Error::FamilyCodeMismatch(FAMILY_CODE, device.address[0]))
+            Err(Error::FamilyCodeMismatch { expected: FAMILY_CODE, actual: device.address[0] })
         } else {
             Ok(DS18B20 {
                 device,

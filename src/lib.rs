@@ -27,8 +27,14 @@ pub enum Command {
 #[derive(Debug)]
 pub enum Error<E: Sized + Debug> {
     WireNotHigh,
-    CrcMismatch(u8, u8),
-    FamilyCodeMismatch(u8, u8),
+    CrcMismatch {
+        computed: u8,
+        expected: u8,
+    },
+    FamilyCodeMismatch {
+        expected: u8,
+        actual: u8,
+    },
     Debug(Option<u8>),
     PortError(E),
 }
@@ -571,7 +577,7 @@ pub fn ensure_correct_rcr8<E: Debug>(
 ) -> Result<(), Error<E>> {
     let computed = compute_crc8(device, data);
     if computed != crc8 {
-        Err(Error::CrcMismatch(computed, crc8))
+        Err(Error::CrcMismatch{ computed, expected: crc8 } )
     } else {
         Ok(())
     }
