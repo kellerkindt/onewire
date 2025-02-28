@@ -109,17 +109,12 @@ impl core::str::FromStr for Device {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 enum SearchState {
+    #[default]
     Initialized,
     DeviceFound,
     End,
-}
-
-impl Default for SearchState {
-    fn default() -> Self {
-        SearchState::Initialized
-    }
 }
 
 #[derive(Clone, Default)]
