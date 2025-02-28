@@ -63,3 +63,9 @@ fn main() -> ! {
 }
 ```
 The code from the example is copy&pasted from a working project, but not tested in this specific combination. 
+
+# `defmt` support
+Enable the optional `defmt` feature, to be able to print the errors this library produces.  
+See: https://crates.io/crates/defmt
+
+Enable the optional `defmt-debug2format` feature, to enable formatting Error::PortError with the defmt::Debug2Format adapter (:warning: performance intensive).
