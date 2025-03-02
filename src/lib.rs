@@ -109,17 +109,12 @@ impl core::str::FromStr for Device {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 enum SearchState {
+    #[default]
     Initialized,
     DeviceFound,
     End,
-}
-
-impl Default for SearchState {
-    fn default() -> Self {
-        SearchState::Initialized
-    }
 }
 
 #[derive(Clone, Default)]
@@ -237,7 +232,7 @@ pub struct DeviceSearchIter<'a, ODO: OpenDrainOutput, Delay: DelayNs> {
     delay: &'a mut Delay,
 }
 
-impl<'a, ODO: OpenDrainOutput, Delay: DelayNs> Iterator for DeviceSearchIter<'a, ODO, Delay> {
+impl<ODO: OpenDrainOutput, Delay: DelayNs> Iterator for DeviceSearchIter<'_, ODO, Delay> {
     type Item = Result<Device, Error<ODO::Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
