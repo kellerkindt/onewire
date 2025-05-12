@@ -18,5 +18,8 @@ embedded-hal = "1.0.0"
 defmt = { version = "0.3.10", optional = true }
 
 [features]
-default = []
+default = ["crc-lookup"]
 defmt-debug2format = []
+
+# Enables faster lookups using the DOW CRC lookup table
+crc-lookup = []
