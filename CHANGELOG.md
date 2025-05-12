@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
-## [0.3.14] - 2025-05-12
+## [0.4.0] - 2025-05-12
 ### Added
 ### Changed
  - Upgrade to Rust 2018 edition, take pin by ownership, make search iter nicer ([1b1cd46], [@kellerkindt])
