@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 ### Changed
+ - Use pedantic mode ([gh-24] [@rkuris])
 ### Deprecated
 ### Removed
 ### Fixed
 ### Security
+
+[gh-24]: https://github.com/kellerkindt/onewire/pull/24
 
 ## [0.4.0] - 2025-05-12
 ### Added

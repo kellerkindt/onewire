@@ -23,3 +23,9 @@ defmt-debug2format = []
 
 # Enables faster lookups using the DOW CRC lookup table
 crc-lookup = []
+
+[lints.clippy]
+pedantic = "warn"
+missing_const_for_fn = "warn"
+explicit_deref_methods = "warn"
+# indexing_slicing = "warn"
