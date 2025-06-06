@@ -82,7 +82,8 @@ impl defmt::Format for Device {
 }
 
 impl Device {
-    pub fn family_code(&self) -> u8 {
+    #[must_use]
+    pub const fn family_code(&self) -> u8 {
         self.address[0]
     }
 }
@@ -125,10 +126,12 @@ pub struct DeviceSearch {
 }
 
 impl DeviceSearch {
+    #[must_use]
     pub fn new() -> DeviceSearch {
         DeviceSearch::default()
     }
 
+    #[must_use]
     pub fn new_for_family(family: u8) -> DeviceSearch {
         let mut search = DeviceSearch::new();
         search.address[0] = family;
@@ -177,7 +180,10 @@ impl DeviceSearch {
     }
 
     fn is_bit_set(array: &[u8], bit: u8) -> bool {
-        if bit / 8 >= array.len() as u8 {
+        let Ok(array_length) = array.len().try_into() else {
+            return false;
+        };
+        if bit / 8 >= array_length {
             return false;
         }
         let index = bit / 8;
@@ -186,23 +192,31 @@ impl DeviceSearch {
     }
 
     fn set_bit(array: &mut [u8], bit: u8) {
-        if bit / 8 >= array.len() as u8 {
+        let Ok(array_length) = array.len().try_into() else {
+            return;
+        };
+        if bit / 8 >= array_length {
             return;
         }
         let index = bit / 8;
         let offset = bit % 8;
-        array[index as usize] |= 0x01 << offset
+        array[index as usize] |= 0x01 << offset;
     }
 
     fn reset_bit(array: &mut [u8], bit: u8) {
-        if bit / 8 >= array.len() as u8 {
+        let Ok(array_length) = array.len().try_into() else {
+            return;
+        };
+
+        if bit / 8 >= array_length {
             return;
         }
         let index = bit / 8;
         let offset = bit % 8;
-        array[index as usize] &= !(0x01 << offset)
+        array[index as usize] &= !(0x01 << offset);
     }
 
+    #[must_use]
     pub fn last_discrepancy(&self) -> Option<u8> {
         let mut result = None;
         for i in 0..ADDRESS_BITS {
@@ -250,21 +264,25 @@ pub trait OpenDrainOutput {
     type Error: Sized + Debug;
 
     /// Is the input pin high?
+    #[allow(clippy::missing_errors_doc)]
     fn is_high(&mut self) -> Result<bool, Self::Error>;
 
     /// Is the input pin low?
+    #[allow(clippy::missing_errors_doc)]
     fn is_low(&mut self) -> Result<bool, Self::Error>;
 
     /// Drives the pin low
     ///
     /// *NOTE* the actual electrical state of the pin may not actually be low, e.g. due to external
     /// electrical sources
+    #[allow(clippy::missing_errors_doc)]
     fn set_low(&mut self) -> Result<(), Self::Error>;
 
     /// Drives the pin high
     ///
     /// *NOTE* the actual electrical state of the pin may not actually be high, e.g. due to external
     /// electrical sources
+    #[allow(clippy::missing_errors_doc)]
     fn set_high(&mut self) -> Result<(), Self::Error>;
 }
 impl<E: Debug, P: OutputPin<Error = E> + InputPin<Error = E>> OpenDrainOutput for P {
@@ -293,13 +311,14 @@ pub struct OneWire<ODO: OpenDrainOutput> {
 }
 
 impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
-    pub fn new(output: ODO, parasite_mode: bool) -> Self {
+    pub const fn new(output: ODO, parasite_mode: bool) -> Self {
         OneWire {
             output,
             parasite_mode,
         }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn reset_select_write_read(
         &mut self,
         delay: &mut impl DelayNs,
@@ -314,6 +333,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Ok(())
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn reset_select_read_only(
         &mut self,
         delay: &mut impl DelayNs,
@@ -326,6 +346,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Ok(())
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn reset_select_write_only(
         &mut self,
         delay: &mut impl DelayNs,
@@ -338,6 +359,8 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Ok(())
     }
 
+    /// Select a device
+    #[allow(clippy::missing_errors_doc)]
     pub fn select(&mut self, delay: &mut impl DelayNs, device: &Device) -> Result<(), Error<E>> {
         let parasite_mode = self.parasite_mode;
         self.write_command(delay, Command::SelectRom, parasite_mode)?; // select
@@ -348,6 +371,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Ok(())
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn search_next(
         &mut self,
         search: &mut DeviceSearch,
@@ -356,6 +380,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         self.search(search, delay, Command::SearchNext)
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn search_next_alarmed(
         &mut self,
         search: &mut DeviceSearch,
@@ -364,7 +389,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         self.search(search, delay, Command::SearchNextAlarmed)
     }
 
-    /// Heavily inspired by https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362
+    /// Heavily inspired by <https://github.com/ntruchsess/arduino-OneWire/blob/85d1aae63ea4919c64151e03f7e24c2efbc40198/OneWire.cpp#L362>
     fn search(
         &mut self,
         rom: &mut DeviceSearch,
@@ -393,12 +418,11 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
                 if bit0 && bit1 {
                     // no device responded
                     return Ok(None);
-                } else {
-                    let bit = rom.is_bit_set_in_address(i);
-                    // rom.write_bit_in_address(i, bit0);
-                    // rom.write_bit_in_discrepancy(i, bit);
-                    self.write_bit(delay, bit)?;
                 }
+                let bit = rom.is_bit_set_in_address(i);
+                // rom.write_bit_in_address(i, bit0);
+                // rom.write_bit_in_discrepancy(i, bit);
+                self.write_bit(delay, bit)?;
             }
         } else {
             // no discrepancy and device found, meaning the one found is the only one
@@ -452,6 +476,10 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     /// Returns Err(WireNotHigh) if the wire seems to be shortened,
     /// Ok(true) if presence pulse has been received and Ok(false)
     /// if no other device was detected but the wire seems to be ok
+    ///
+    /// # Errors
+    ///
+    /// Low level bit-push errors can result in some errors
     pub fn reset(&mut self, delay: &mut impl DelayNs) -> Result<bool, Error<E>> {
         // let mut cli = DisableInterrupts::new();
         self.set_input()?;
@@ -460,7 +488,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         self.ensure_wire_high(delay)?;
         // cli = DisableInterrupts::new();
         self.write_low()?;
-        self.set_output()?;
 
         // drop(cli);
         delay.delay_us(480);
@@ -487,6 +514,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         Err(Error::WireNotHigh)
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn read_bytes(&mut self, delay: &mut impl DelayNs, dst: &mut [u8]) -> Result<(), E> {
         for d in dst {
             *d = self.read_byte(delay)?;
@@ -507,7 +535,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
 
     fn read_bit(&mut self, delay: &mut impl DelayNs) -> Result<bool, E> {
         // let cli = DisableInterrupts::new();
-        self.set_output()?;
         self.write_low()?;
         delay.delay_us(3);
         self.set_input()?;
@@ -518,6 +545,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         val
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn write_bytes(&mut self, delay: &mut impl DelayNs, bytes: &[u8]) -> Result<(), E> {
         for b in bytes {
             self.write_byte(delay, *b, false)?;
@@ -556,7 +584,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     fn write_bit(&mut self, delay: &mut impl DelayNs, high: bool) -> Result<(), E> {
         // let cli = DisableInterrupts::new();
         self.write_low()?;
-        self.set_output()?;
         delay.delay_us(if high { 10 } else { 65 });
         self.write_high()?;
         // drop(cli);
@@ -574,11 +601,6 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
         self.output.set_high()
     }
 
-    fn set_output(&mut self) -> Result<(), E> {
-        // nothing to do?
-        Ok(())
-    }
-
     fn write_low(&mut self) -> Result<(), E> {
         self.output.set_low()
     }
@@ -592,19 +614,24 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     }
 }
 
+/// Check the CRC
+///
+/// # Errors
+///
+/// [`Error::CrcMismatch`] if the checksum doesn't match
 pub fn ensure_correct_rcr8<E: Debug>(
     device: &Device,
     data: &[u8],
     crc8: u8,
 ) -> Result<(), Error<E>> {
     let computed = crc::compute_crc8(device, data);
-    if computed != crc8 {
+    if computed == crc8 {
+        Ok(())
+    } else {
         Err(Error::CrcMismatch {
             computed,
             expected: crc8,
         })
-    } else {
-        Ok(())
     }
 }
 
@@ -650,6 +677,8 @@ mod crc {
 // Original algorithm preserved here
 // This uses less memory, but is substantially slower
 mod crc {
+    use super::Device;
+
     pub fn compute_crc8(device: &Device, data: &[u8]) -> u8 {
         let crc = compute_partial_crc8(0u8, &device.address[..]);
         compute_partial_crc8(crc, data)
@@ -692,7 +721,13 @@ impl Display for Device {
 pub trait Sensor {
     fn family_code() -> u8;
 
-    /// returns the milliseconds required to wait until the measurement finished
+    /// start making a measurement
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of milliseconds to wait before
+    /// calling `read_measurement`
+    #[allow(clippy::missing_errors_doc)]
     fn start_measurement<O: OpenDrainOutput>(
         &self,
         wire: &mut OneWire<O>,
@@ -700,12 +735,14 @@ pub trait Sensor {
     ) -> Result<u16, Error<O::Error>>;
 
     /// returns the measured value
+    #[allow(clippy::missing_errors_doc)]
     fn read_measurement<O: OpenDrainOutput>(
         &self,
         wire: &mut OneWire<O>,
         delay: &mut impl DelayNs,
     ) -> Result<f32, Error<O::Error>>;
 
+    #[allow(clippy::missing_errors_doc)]
     fn read_measurement_raw<O: OpenDrainOutput>(
         &self,
         wire: &mut OneWire<O>,

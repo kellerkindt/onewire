@@ -31,7 +31,8 @@ pub enum MeasureResolution {
 }
 
 impl MeasureResolution {
-    pub fn time_ms(&self) -> u16 {
+    #[must_use]
+    pub const fn time_ms(&self) -> u16 {
         match self {
             MeasureResolution::TC8 => 94,
             MeasureResolution::TC4 => 188,
@@ -47,16 +48,22 @@ pub struct DS18B20 {
 }
 
 impl DS18B20 {
-    pub fn new(device: Device) -> Result<DS18B20, Error<Infallible>> {
-        if device.address[0] != FAMILY_CODE {
-            Err(Error::FamilyCodeMismatch {
-                expected: FAMILY_CODE,
-                actual: device.address[0],
-            })
-        } else {
+    /// Create a new DS18B20
+    ///
+    /// # Errors
+    ///
+    /// `FamilyCodeMismatch` if the device doesn't match the
+    /// family code for DS18B20 devices
+    pub const fn new(device: Device) -> Result<DS18B20, Error<Infallible>> {
+        if device.address[0] == FAMILY_CODE {
             Ok(DS18B20 {
                 device,
                 resolution: MeasureResolution::TC,
+            })
+        } else {
+            Err(Error::FamilyCodeMismatch {
+                expected: FAMILY_CODE,
+                actual: device.address[0],
             })
         }
     }
@@ -65,13 +72,23 @@ impl DS18B20 {
     ///
     /// This is marked as unsafe because it does not check whether the given address
     /// is compatible with a DS18B20 device. It assumes so.
-    pub unsafe fn new_forced(device: Device) -> DS18B20 {
+    #[must_use]
+    pub const unsafe fn new_forced(device: Device) -> DS18B20 {
         DS18B20 {
             device,
             resolution: MeasureResolution::TC,
         }
     }
 
+    /// Start measuring temperature on the device
+    ///
+    /// After calling this method, the caller should
+    /// wait until the resolution specified timeframe
+    /// has passed before calling `read_temperature`
+    ///
+    /// # Errors
+    ///
+    /// Only low level wire errors are returned.
     pub fn measure_temperature<O: OpenDrainOutput>(
         &self,
         wire: &mut OneWire<O>,
@@ -81,6 +98,17 @@ impl DS18B20 {
         Ok(self.resolution)
     }
 
+    /// Read the temperature from the device
+    ///
+    /// This call should be made after `measure_temperature`
+    /// TODO: This should be enforced at compile time
+    ///
+    /// # Errors
+    ///
+    /// `CRC_MISMATCH` if the read temperature doesn't
+    /// pass the checksum
+    ///
+    /// Other low-level wire errors are also possible, but unlikely.
     pub fn read_temperature<O: OpenDrainOutput>(
         &self,
         wire: &mut OneWire<O>,
@@ -120,8 +148,9 @@ impl Sensor for DS18B20 {
         wire: &mut OneWire<O>,
         delay: &mut impl DelayNs,
     ) -> Result<f32, Error<O::Error>> {
+        #[expect(clippy::cast_possible_wrap)]
         self.read_temperature(wire, delay)
-            .map(|t| t as i16 as f32 / 16_f32)
+            .map(|t| f32::from(t as i16) / 16_f32)
     }
 
     fn read_measurement_raw<O: OpenDrainOutput>(
@@ -135,11 +164,14 @@ impl Sensor for DS18B20 {
 
 /// Split raw u16 value to two parts: integer and fraction N
 /// Original value may be calculated as: integer + fraction/10000
-pub fn split_temp(temperature: u16) -> (i16, i16) {
+#[must_use]
+pub const fn split_temp(temperature: u16) -> (i16, i16) {
+    #[expect(clippy::cast_possible_wrap)]
+    let temp_i16: i16 = temperature as i16;
     if temperature < 0x8000 {
-        (temperature as i16 >> 4, (temperature as i16 & 0xF) * 625)
+        (temp_i16 >> 4, (temp_i16 & 0xF) * 625)
     } else {
-        let abs = -(temperature as i16);
+        let abs = -temp_i16;
         (-(abs >> 4), -625 * (abs & 0xF))
     }
 }
