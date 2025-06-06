@@ -479,7 +479,7 @@ impl<E: core::fmt::Debug, ODO: OpenDrainOutput<Error = E>> OneWire<ODO> {
     ///
     /// # Errors
     ///
-    /// Low level bit-push errors can res
+    /// Low level bit-push errors can result in some errors
     pub fn reset(&mut self, delay: &mut impl DelayNs) -> Result<bool, Error<E>> {
         // let mut cli = DisableInterrupts::new();
         self.set_input()?;
